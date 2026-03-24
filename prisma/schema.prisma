@@ -1,0 +1,691 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  OWNER
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum PropertyStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  DRAFT
+}
+
+enum PropertyType {
+  FAMILY_FLAT
+  BACHELOR_ROOM
+  SUBLET
+  HOSTEL
+  OFFICE_SPACE
+  COMMERCIAL
+  RESTAURANT
+}
+
+enum FurnishedStatus {
+  FURNISHED
+  SEMI_FURNISHED
+  UNFURNISHED
+}
+
+enum PropertyCondition {
+  NEW
+  GOOD
+  RENOVATED
+  NEEDS_RENOVATION
+}
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  PAYMENT_PENDING
+  CONFIRMED
+  CANCELLED
+  DECLINED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  SHURJOPAY
+  STRIPE
+  BKASH
+  NAGAD
+  ROCKET
+  CARD
+  BANK_TRANSFER
+  CASH
+}
+
+enum PaymentGateway {
+  SHURJOPAY
+  STRIPE
+  SSLCOMMERZ
+}
+
+enum AvailableFor {
+  FAMILY
+  BACHELOR
+  ANY
+  CORPORATE
+  STUDENTS
+}
+
+// ─── Models ────────────────────────────────────────────────────────────────────
+
+// User Model
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  phone         String         @unique
+  password      String?
+  name          String
+  role          UserRole       @default(USER)
+  status        UserStatus     @default(ACTIVE)
+  profileImage  String?
+  emailVerified DateTime?
+  phoneVerified DateTime?
+  rating        Float          @default(0)
+  totalReviews  Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  // Relations
+  properties     Property[]
+  bookings       Booking[]
+  reviews        Review[]
+  savedProperties SavedProperty[]
+  notifications  Notification[]
+  messages       Message[]
+  reports        Report[]
+  payments       Payment[]
+  
+  // Extended profiles
+  ownerProfile   OwnerProfile?
+  userProfile    UserProfile?
+  
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+// Extended profile for owners
+model OwnerProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName       String?
+  businessLicense   String?
+  nidNumber         String?
+  tinNumber         String?
+  verified          Boolean  @default(false)
+  verifiedAt        DateTime?
+  totalProperties   Int      @default(0)
+  responseRate      Float    @default(0)
+  responseTime      String?  // Average response time
+  totalEarnings     Float    @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("owner_profiles")
+}
+
+// Extended profile for users/tenants
+model UserProfile {
+  id                String         @id @default(uuid())
+  userId            String         @unique
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  preferredLocations String[]
+  preferredTypes    PropertyType[]
+  budgetMin         Float?
+  budgetMax         Float?
+  occupation        String?
+  nidNumber         String?
+  nidVerified       Boolean        @default(false)
+  nidImage          String?
+  emergencyContact  String?
+  emergencyName     String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  
+  @@map("user_profiles")
+}
+
+// Property Categories (Admin managed)
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  nameBn      String?
+  description String?
+  icon        String?
+  slug        String   @unique
+  type        PropertyType
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  properties  Property[]
+  
+  @@map("categories")
+}
+
+// Main Property Model
+model Property {
+  id                  String            @id @default(uuid())
+  title               String
+  description         String            @db.Text
+  slug                String            @unique
+  ownerId             String
+  owner               User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  categoryId          String?
+  category            Category?         @relation(fields: [categoryId], references: [id])
+  type                PropertyType
+  status              PropertyStatus    @default(PENDING_REVIEW)
+  rejectionReason     String?           @db.Text
+  
+  // Location Details
+  location            Json?             // { city: string, area: string, address: string, latitude: float, longitude: float }
+  city                String
+  area                String
+  address             String            @db.Text
+  latitude            Float?
+  longitude           Float?
+  
+  // Property Overview
+  size                Float?            // in sqft
+  propertyCondition   PropertyCondition @default(GOOD)
+  floor               String?           // e.g., "13th floor / 1"
+  furnishedStatus     FurnishedStatus   @default(UNFURNISHED)
+  
+  // Pricing
+  rentAmount          Float
+  serviceCharge       Float?            @default(0)
+  advanceDeposit      Float?            // Advance/security deposit
+  bookingFee          Float?            @default(0) // Fee for booking confirmation
+  isNegotiable        Boolean           @default(false)
+  
+  // Availability
+  availableFrom       DateTime
+  availableFor        AvailableFor      @default(ANY)
+  minimumStay         Int?              // in months
+  maximumStay         Int?              // in months
+  
+  // Property Details
+  bedrooms            Int               @default(0)
+  bathrooms           Int               @default(0)
+  balconies           Int               @default(0)
+  parkingSpaces       Int               @default(0)
+  
+  // House Rules
+  rules               Json?             // Array of rules { rule: string, isStrict: boolean }
+  
+  // Amenities (Array of strings)
+  amenities           String[]          // Comprehensive amenities list
+  
+  // Media
+  images              String[]          // Array of Cloudinary URLs
+  videoUrl            String?
+  floorPlanImage      String?           // Floor plan image URL
+  
+  // Stats
+  views               Int               @default(0)
+  savedCount          Int               @default(0)
+  bookingCount        Int               @default(0)
+  rating              Float             @default(0)
+  totalReviews        Int               @default(0)
+  
+  // Timestamps
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  publishedAt         DateTime?
+  
+  // Relations
+  bookings            Booking[]
+  reviews             Review[]
+  savedByUsers        SavedProperty[]
+  reports             Report[]
+  viewLogs            PropertyViewLog[]
+  
+  @@index([ownerId])
+  @@index([status])
+  @@index([type])
+  @@index([city, area])
+  @@index([rentAmount])
+  @@index([availableFrom])
+  @@index([rating])
+  @@map("properties")
+}
+
+// Property View Log for Analytics
+model PropertyViewLog {
+  id          String   @id @default(uuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  ipAddress   String?
+  userAgent   String?
+  viewedAt    DateTime @default(now())
+  
+  @@index([propertyId])
+  @@index([viewedAt])
+  @@map("property_view_logs")
+}
+
+// Booking Model
+model Booking {
+  id                String        @id @default(uuid())
+  propertyId        String
+  property          Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Booking Details
+  message           String?       @db.Text
+  moveInDate        DateTime
+  moveOutDate       DateTime?
+  numberOfTenants   Int           @default(1)
+  
+  // Pricing
+  rentAmount        Float         // Snapshot of rent at booking time
+  serviceCharge     Float?        // Snapshot of service charge
+  totalAmount       Float
+  bookingFee        Float?        // Fee paid to confirm booking
+  discount          Float?        @default(0)
+  
+  // Status
+  status            BookingStatus @default(PENDING)
+  ownerResponseDate DateTime?
+  userConfirmedAt   DateTime?
+  
+  // Timeline
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  expiresAt         DateTime?     // Booking request expiration (24 hours by default)
+  confirmedAt       DateTime?
+  cancelledAt       DateTime?
+  cancellationReason String?      @db.Text
+  
+  // Relations
+  payment           Payment?
+  review            Review?
+  notifications     Notification[]
+  
+  @@index([propertyId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("bookings")
+}
+
+// Enhanced Payment Model with Multiple Payment Methods
+model Payment {
+  id                String        @id @default(uuid())
+  bookingId         String        @unique
+  booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User          @relation(fields: [userId], references: [id])
+  
+  // Payment Details
+  amount            Float
+  paymentMethod     PaymentMethod
+  paymentGateway    PaymentGateway @default(STRIPE)
+  
+  // Transaction Details
+  transactionId     String?       @unique
+  gatewayTransactionId String?    @unique // ID from payment gateway
+  invoiceNumber     String?       @unique
+  
+  // Payment Status
+  status            PaymentStatus @default(PENDING)
+  failureReason     String?
+  failureCode       String?
+  
+  // Gateway Response
+  gatewayRequest    Json?         // Request sent to gateway
+  gatewayResponse   Json?         // Raw response from gateway
+  webhookData       Json?         // Webhook data from gateway
+  
+  // Refund Details
+  refundAmount      Float?        @default(0)
+  refundReason      String?
+  refundedAt        DateTime?
+  refundTransactionId String?
+  
+  // Timestamps
+  initiatedAt       DateTime      @default(now())
+  completedAt       DateTime?
+  updatedAt         DateTime      @updatedAt
+  
+  // Relations
+  paymentLogs       PaymentLog[]
+  
+  @@index([bookingId])
+  @@index([userId])
+  @@index([status])
+  @@index([transactionId])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+// Payment Logs for Audit Trail
+model PaymentLog {
+  id          String        @id @default(uuid())
+  paymentId   String
+  payment     Payment       @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  action      String        // initiate, success, failure, webhook, refund
+  status      PaymentStatus
+  message     String?       @db.Text
+  metadata    Json?         // Additional data like IP, user agent, etc.
+  createdAt   DateTime      @default(now())
+  
+  @@index([paymentId])
+  @@index([createdAt])
+  @@map("payment_logs")
+}
+
+// Payment Method Configuration for Admin
+model PaymentMethodConfig {
+  id              String        @id @default(uuid())
+  gateway         PaymentGateway @unique
+  isActive        Boolean       @default(true)
+  config          Json          // Store gateway configuration
+  supportedMethods PaymentMethod[]
+  feePercentage   Float?        @default(0) // Platform fee percentage
+  feeFixed        Float?        @default(0) // Fixed platform fee
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@map("payment_method_configs")
+}
+
+// Review Model
+model Review {
+  id                String        @id @default(uuid())
+  propertyId        String
+  property          Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  bookingId         String        @unique
+  booking           Booking       @relation(fields: [bookingId], references: [id])
+  userId            String
+  user              User          @relation(fields: [userId], references: [id])
+  
+  rating            Int           // 1-5 stars
+  comment           String?       @db.Text
+  isFlagged         Boolean       @default(false)
+  flagReason        String?
+  adminNote         String?       @db.Text
+  isPublished       Boolean       @default(true)
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@index([propertyId])
+  @@index([userId])
+  @@index([rating])
+  @@unique([bookingId])
+  @@map("reviews")
+}
+
+// Saved Properties (Favorites)
+model SavedProperty {
+  id                String        @id @default(uuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId        String
+  property          Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime      @default(now())
+  
+  @@unique([userId, propertyId])
+  @@map("saved_properties")
+}
+
+// Notification Model
+model Notification {
+  id                String        @id @default(uuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId         String?
+  booking           Booking?      @relation(fields: [bookingId], references: [id])
+  
+  title             String
+  message           String        @db.Text
+  type              String        // booking_update, payment, review, system, message
+  isRead            Boolean       @default(false)
+  readAt            DateTime?
+  metadata          Json?         // Additional data
+  actionUrl         String?       // URL to navigate when clicked
+  
+  createdAt         DateTime      @default(now())
+  
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// Message/Chat Model
+model Message {
+  id                String        @id @default(uuid())
+  propertyId        String?
+  property          Property?     @relation(fields: [propertyId], references: [id])
+  senderId          String
+  sender            User          @relation("senderMessages", fields: [senderId], references: [id])
+  receiverId        String
+  receiver          User          @relation("receiverMessages", fields: [receiverId], references: [id])
+  
+  content           String        @db.Text
+  attachments       String[]      // Array of attachment URLs
+  isRead            Boolean       @default(false)
+  readAt            DateTime?
+  
+  createdAt         DateTime      @default(now())
+  
+  @@index([senderId, receiverId])
+  @@index([propertyId])
+  @@map("messages")
+}
+
+// Report Model
+model Report {
+  id                String        @id @default(uuid())
+  reporterId        String
+  reporter          User          @relation("reporterReports", fields: [reporterId], references: [id])
+  reportedUserId    String?
+  reportedUser      User?         @relation("reportedUserReports", fields: [reportedUserId], references: [id])
+  propertyId        String?
+  property          Property?     @relation(fields: [propertyId], references: [id])
+  
+  reason            String
+  description       String?       @db.Text
+  status            String        @default("PENDING") // PENDING, REVIEWED, RESOLVED, DISMISSED
+  adminNote         String?       @db.Text
+  resolvedBy        String?
+  resolvedAt        DateTime?
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@index([reporterId])
+  @@index([propertyId])
+  @@index([status])
+  @@map("reports")
+}
+
+// Blog Post Model
+model BlogPost {
+  id                String        @id @default(uuid())
+  title             String
+  slug              String        @unique
+  excerpt           String        @db.Text
+  content           String        @db.Text
+  featuredImage     String?
+  authorId          String
+  author            User          @relation(fields: [authorId], references: [id])
+  
+  category          String?
+  tags              String[]
+  views             Int           @default(0)
+  isPublished       Boolean       @default(false)
+  publishedAt       DateTime?
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@index([isPublished])
+  @@index([slug])
+  @@map("blog_posts")
+}
+
+// Analytics Model
+model Analytics {
+  id                String        @id @default(uuid())
+  date              DateTime      @default(now())
+  
+  // Daily metrics
+  totalUsers        Int           @default(0)
+  totalProperties   Int           @default(0)
+  totalBookings     Int           @default(0)
+  totalRevenue      Float         @default(0)
+  newUsers          Int           @default(0)
+  newProperties     Int           @default(0)
+  newBookings       Int           @default(0)
+  
+  // Platform metrics
+  activeUsers       Int           @default(0)
+  activeProperties  Int           @default(0)
+  pendingProperties Int           @default(0)
+  
+  // Payment metrics
+  totalTransactions Int           @default(0)
+  successfulPayments Int          @default(0)
+  failedPayments    Int           @default(0)
+  totalPlatformFee  Float         @default(0)
+  
+  metadata          Json?         // Additional metrics
+  
+  @@unique([date])
+  @@map("analytics")
+}
+
+// Session Model for Redis alternative (optional)
+model Session {
+  id              String        @id @default(uuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token           String        @unique
+  refreshToken    String?       @unique
+  expiresAt       DateTime
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([token])
+  @@index([userId])
+  @@map("sessions")
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// generator client {
+//   provider = "prisma-client"
+//   output   = "../generated/prisma"
+// }
+
+// datasource db {
+//   provider = "postgresql"
+// }
+
+// model User {
+//     id        String   @id @default(uuid())
+//     email     String   @unique
+//     name      String?
+//     createdAt DateTime @default(now())
+//     updatedAt DateTime @updatedAt
+// }
