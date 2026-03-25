@@ -1,3 +1,35 @@
 node_modules
 dist
 .env
+
+
+# Important: You must run this command inside your project directory.
+
+cd my-new-project
+# Using full command
+apollo-cli generate module User
+
+# Using alias
+apollo-cli g module User
+This will create src/modules/User with:
+
+user.controller.ts: Request handlers
+user.service.ts: Business logic
+user.route.ts: Express routes
+user.interface.ts: TypeScript interfaces
+user.validation.ts: Zod validation schemas
+user.constant.ts: Module constants
+The module will be automatically placed in src/modules/User (capitalized).
+
+3. Build for Production
+Builds your TypeScript application to the dist folder.
+
+apollo-cli build
+4. Prisma Utilities
+Convenient wrappers for common Prisma commands.
+
+# Generate Prisma Client (runs: npx prisma generate)
+apollo-cli prisma generate
+
+# Run Migrations (runs: npx prisma migrate dev)
+apollo-cli prisma migrate

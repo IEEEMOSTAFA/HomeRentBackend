@@ -1,0 +1,104 @@
+// prisma/schema.prisma
+// RentHome — Final Schema
+// Auth pattern mirrors SkillBridge (BetterAuth: Account + Session + Verification)
+// Role pattern mirrors SkillBridge (extension profile table for Owner, like TutorProfile)
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN  // Controls platform: approve/reject listings, ban users, manage blog
+  OWNER  // Posts and manages property listings, responds to bookings
+  USER   // Searches properties, makes bookings, pays, leaves reviews
+  // Role is fixed at registration — only Admin can change it
+}
+
+enum PropertyType {
+  FAMILY_FLAT
+  BACHELOR_ROOM
+  SUBLET
+  HOSTEL
+  OFFICE_SPACE
+  COMMERCIAL
+}
+
+enum PropertyStatus {
+  PENDING  // Submitted by Owner, waiting for Admin approval
+  APPROVED // Publicly visible
+  REJECTED // Rejected by Admin with a written reason
+}
+
+enum AvailableFor {
+  FAMILY
+  BACHELOR
+  CORPORATE
+  ANY
+}
+
+enum BookingStatus {
+  PENDING         // USER submitted, waiting for OWNER response
+  ACCEPTED        // OWNER accepted, waiting for payment
+  PAYMENT_PENDING // Stripe session created, not yet paid
+  CONFIRMED       // Payment successful — booking is live
+  DECLINED        // OWNER declined the request
+  CANCELLED       // USER cancelled before confirmation
+}
+
+enum PaymentStatus {
+  PENDING  // Stripe session initiated
+  SUCCESS  // Stripe confirmed payment
+  FAILED   // Stripe payment failed
+  REFUNDED // Refunded after cancellation
+}
+
+// ─── BETTERAUTH MODELS ────────────────────────────────────────────────────────
+// Keep identical structure to SkillBridge so BetterAuth works out of the box.
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?                       // Profile photo URL (Cloudinary)
+  role          UserRole  @default(USER)      // Fixed at signup
+  isActive      Boolean   @default(true)
+  isBanned      Boolean   @default(false)     // Admin can ban harmful users
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // BetterAuth relations (do not modify)
+  accounts      Account[]
+  sessions      Session[]
+
+  // OWNER-only relations
+  ownerProfile  OwnerProfile?
+  properties    Property[]
+
+  // USER-only relations
+  bookings      Booking[]       @relation("UserBookings")
+  payments      Payment[]
+  reviews       Review[]        @relation("UserReviews")
+
+  // ADMIN-only relations
+  blogPosts     BlogPost[]
+
+  // Both USER and OWNER receive notifications
+  notifications Notification[]
+
+  @@index([email])
+  @@index([role])
+  @@index([isBanned])
+  @@map("users")
+}
+
+model Session {
+  id           
