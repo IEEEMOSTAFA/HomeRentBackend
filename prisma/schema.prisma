@@ -1,8 +1,11 @@
 // prisma/schema.prisma
+// RentHome — Final Schema
+// Auth pattern mirrors SkillBridge (BetterAuth: Account + Session + Verification)
+// Role pattern mirrors SkillBridge (extension profile table for Owner, like TutorProfile)
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -10,25 +13,13 @@ datasource db {
   // url      = env("DATABASE_URL")
 }
 
-// ─── Enums ────────────────────────────────────────────────────────────────────
+// ─── ENUMS ────────────────────────────────────────────────────────────────────
 
 enum UserRole {
-  ADMIN
-  OWNER
-  USER
-}
-
-enum UserStatus {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
-}
-
-enum PropertyStatus {
-  PENDING_REVIEW
-  APPROVED
-  REJECTED
-  DRAFT
+  ADMIN  // Controls platform: approve/reject listings, ban users, manage blog
+  OWNER  // Posts and manages property listings, responds to bookings
+  USER   // Searches properties, makes bookings, pays, leaves reviews
+  // Role is fixed at registration — only Admin can change it
 }
 
 enum PropertyType {
@@ -38,654 +29,354 @@ enum PropertyType {
   HOSTEL
   OFFICE_SPACE
   COMMERCIAL
-  RESTAURANT
 }
 
-enum FurnishedStatus {
-  FURNISHED
-  SEMI_FURNISHED
-  UNFURNISHED
-}
-
-enum PropertyCondition {
-  NEW
-  GOOD
-  RENOVATED
-  NEEDS_RENOVATION
-}
-
-enum BookingStatus {
-  PENDING
-  ACCEPTED
-  PAYMENT_PENDING
-  CONFIRMED
-  CANCELLED
-  DECLINED
-  COMPLETED
-}
-
-enum PaymentStatus {
-  PENDING
-  PROCESSING
-  SUCCESS
-  FAILED
-  REFUNDED
-  PARTIALLY_REFUNDED
-  CANCELLED
-}
-
-enum PaymentMethod {
-  SHURJOPAY
-  STRIPE
-  BKASH
-  NAGAD
-  ROCKET
-  CARD
-  BANK_TRANSFER
-  CASH
-}
-
-enum PaymentGateway {
-  SHURJOPAY
-  STRIPE
-  SSLCOMMERZ
+enum PropertyStatus {
+  PENDING  // Submitted by Owner, waiting for Admin approval
+  APPROVED // Publicly visible
+  REJECTED // Rejected by Admin with a written reason
 }
 
 enum AvailableFor {
   FAMILY
   BACHELOR
-  ANY
   CORPORATE
-  STUDENTS
+  ANY
 }
 
-// ─── Models ────────────────────────────────────────────────────────────────────
+enum BookingStatus {
+  PENDING         // USER submitted, waiting for OWNER response
+  ACCEPTED        // OWNER accepted, waiting for payment
+  PAYMENT_PENDING // Stripe session created, not yet paid
+  CONFIRMED       // Payment successful — booking is live
+  DECLINED        // OWNER declined the request
+  CANCELLED       // USER cancelled before confirmation
+}
 
-// User Model
+enum PaymentStatus {
+  PENDING  // Stripe session initiated
+  SUCCESS  // Stripe confirmed payment
+  FAILED   // Stripe payment failed
+  REFUNDED // Refunded after cancellation
+}
+
+// ─── BETTERAUTH MODELS ────────────────────────────────────────────────────────
+// Keep identical structure to SkillBridge so BetterAuth works out of the box.
+
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  phone         String         @unique
-  password      String?
+  id            String    @id @default(cuid())
   name          String
-  role          UserRole       @default(USER)
-  status        UserStatus     @default(ACTIVE)
-  profileImage  String?
-  emailVerified DateTime?
-  phoneVerified DateTime?
-  rating        Float          @default(0)
-  totalReviews  Int            @default(0)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  
-  // Relations
-  properties     Property[]
-  bookings       Booking[]
-  reviews        Review[]
-  savedProperties SavedProperty[]
-  notifications  Notification[]
-  messages       Message[]
-  reports        Report[]
-  payments       Payment[]
-  
-  // Extended profiles
-  ownerProfile   OwnerProfile?
-  userProfile    UserProfile?
-  
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?                       // Profile photo URL (Cloudinary)
+  role          UserRole  @default(USER)      // Fixed at signup
+  isActive      Boolean   @default(true)
+  isBanned      Boolean   @default(false)     // Admin can ban harmful users
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // BetterAuth relations (do not modify)
+  accounts      Account[]
+  sessions      Session[]
+
+  // OWNER-only relations
+  ownerProfile  OwnerProfile?
+  properties    Property[]
+
+  // USER-only relations
+  bookings      Booking[]       @relation("UserBookings")
+  payments      Payment[]
+  reviews       Review[]        @relation("UserReviews")
+
+  // ADMIN-only relations
+  blogPosts     BlogPost[]
+
+  // Both USER and OWNER receive notifications
+  notifications Notification[]
+
   @@index([email])
   @@index([role])
-  @@index([status])
+  @@index([isBanned])
   @@map("users")
 }
 
-// Extended profile for owners
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+// ─── RENTHOME MODELS ──────────────────────────────────────────────────────────
+
+// Extension profile for OWNER — mirrors TutorProfile from SkillBridge.
+// Created automatically when a user registers with role=OWNER.
+// Deleted automatically if the Owner account is deleted (Cascade).
 model OwnerProfile {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyName       String?
-  businessLicense   String?
-  nidNumber         String?
-  tinNumber         String?
-  verified          Boolean  @default(false)
-  verifiedAt        DateTime?
-  totalProperties   Int      @default(0)
-  responseRate      Float    @default(0)
-  responseTime      String?  // Average response time
-  totalEarnings     Float    @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  phone           String?
+  nidNumber       String?               // National ID for verification
+  verified        Boolean  @default(false)    // Admin verifies the owner
+  verifiedAt      DateTime?
+
+  // Stats (denormalized for fast dashboard queries — mirrors TutorProfile.rating)
+  totalProperties Int      @default(0)
+  totalEarnings   Float    @default(0)
+  rating          Float    @default(0)
+  totalReviews    Int      @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
   @@map("owner_profiles")
 }
 
-// Extended profile for users/tenants
-model UserProfile {
-  id                String         @id @default(uuid())
-  userId            String         @unique
-  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  preferredLocations String[]
-  preferredTypes    PropertyType[]
-  budgetMin         Float?
-  budgetMax         Float?
-  occupation        String?
-  nidNumber         String?
-  nidVerified       Boolean        @default(false)
-  nidImage          String?
-  emergencyContact  String?
-  emergencyName     String?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  
-  @@map("user_profiles")
-}
-
-// Property Categories (Admin managed)
-model Category {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  nameBn      String?
-  description String?
-  icon        String?
-  slug        String   @unique
-  type        PropertyType
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  properties  Property[]
-  
-  @@map("categories")
-}
-
-// Main Property Model
+// Property posted by an OWNER.
+// Cascade delete: if Owner is deleted → all their properties are deleted.
+// Cascade delete: if Property is deleted → its Bookings, Reviews are deleted.
 model Property {
-  id                  String            @id @default(uuid())
-  title               String
-  description         String            @db.Text
-  slug                String            @unique
-  ownerId             String
-  owner               User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  categoryId          String?
-  category            Category?         @relation(fields: [categoryId], references: [id])
-  type                PropertyType
-  status              PropertyStatus    @default(PENDING_REVIEW)
-  rejectionReason     String?           @db.Text
-  
-  // Location Details
-  location            Json?             // { city: string, area: string, address: string, latitude: float, longitude: float }
-  city                String
-  area                String
-  address             String            @db.Text
-  latitude            Float?
-  longitude           Float?
-  
-  // Property Overview
-  size                Float?            // in sqft
-  propertyCondition   PropertyCondition @default(GOOD)
-  floor               String?           // e.g., "13th floor / 1"
-  furnishedStatus     FurnishedStatus   @default(UNFURNISHED)
-  
+  id              String         @id @default(cuid())
+  ownerId         String
+  owner           User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  title           String
+  description     String         @db.Text
+  type            PropertyType
+  status          PropertyStatus @default(PENDING)
+  rejectionReason String?        @db.Text    // Written by Admin on rejection
+
+  // Location
+  city            String
+  area            String
+  address         String         @db.Text
+
+  // Details
+  bedrooms        Int            @default(0)
+  bathrooms       Int            @default(0)
+  size            Float?                      // sqft, optional
+
   // Pricing
-  rentAmount          Float
-  serviceCharge       Float?            @default(0)
-  advanceDeposit      Float?            // Advance/security deposit
-  bookingFee          Float?            @default(0) // Fee for booking confirmation
-  isNegotiable        Boolean           @default(false)
-  
+  rentAmount      Float
+  advanceDeposit  Float          @default(0)
+  bookingFee      Float          @default(0) // Charged at booking confirmation
+  isNegotiable    Boolean        @default(false)
+
   // Availability
-  availableFrom       DateTime
-  availableFor        AvailableFor      @default(ANY)
-  minimumStay         Int?              // in months
-  maximumStay         Int?              // in months
-  
-  // Property Details
-  bedrooms            Int               @default(0)
-  bathrooms           Int               @default(0)
-  balconies           Int               @default(0)
-  parkingSpaces       Int               @default(0)
-  
-  // House Rules
-  rules               Json?             // Array of rules { rule: string, isStrict: boolean }
-  
-  // Amenities (Array of strings)
-  amenities           String[]          // Comprehensive amenities list
-  
-  // Media
-  images              String[]          // Array of Cloudinary URLs
-  videoUrl            String?
-  floorPlanImage      String?           // Floor plan image URL
-  
-  // Stats
-  views               Int               @default(0)
-  savedCount          Int               @default(0)
-  bookingCount        Int               @default(0)
-  rating              Float             @default(0)
-  totalReviews        Int               @default(0)
-  
-  // Timestamps
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  publishedAt         DateTime?
-  
+  availableFrom   DateTime
+  availableFor    AvailableFor   @default(ANY)
+
+  // Media — array of Cloudinary image URLs (up to 10)
+  images          String[]
+
+  // Denormalized stats (updated on review/booking events)
+  rating          Float          @default(0)
+  totalReviews    Int            @default(0)
+  views           Int            @default(0)
+
+  publishedAt     DateTime?      // Stamped when Admin approves
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
   // Relations
-  bookings            Booking[]
-  reviews             Review[]
-  savedByUsers        SavedProperty[]
-  reports             Report[]
-  viewLogs            PropertyViewLog[]
-  
+  bookings        Booking[]
+  reviews         Review[]
+
   @@index([ownerId])
   @@index([status])
   @@index([type])
   @@index([city, area])
   @@index([rentAmount])
-  @@index([availableFrom])
-  @@index([rating])
   @@map("properties")
 }
 
-// Property View Log for Analytics
-model PropertyViewLog {
-  id          String   @id @default(uuid())
-  propertyId  String
-  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
-  ipAddress   String?
-  userAgent   String?
-  viewedAt    DateTime @default(now())
-  
-  @@index([propertyId])
-  @@index([viewedAt])
-  @@map("property_view_logs")
-}
-
-// Booking Model
+// Booking made by a USER for an APPROVED Property.
+//
+// Status flow:
+//   PENDING → ACCEPTED → PAYMENT_PENDING → CONFIRMED
+//           → DECLINED
+//   PENDING / ACCEPTED → CANCELLED
+//
+// Mirror of SkillBridge Booking — same named relations pattern used.
 model Booking {
-  id                String        @id @default(uuid())
-  propertyId        String
-  property          Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  userId            String
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Booking Details
-  message           String?       @db.Text
-  moveInDate        DateTime
-  moveOutDate       DateTime?
-  numberOfTenants   Int           @default(1)
-  
-  // Pricing
-  rentAmount        Float         // Snapshot of rent at booking time
-  serviceCharge     Float?        // Snapshot of service charge
-  totalAmount       Float
-  bookingFee        Float?        // Fee paid to confirm booking
-  discount          Float?        @default(0)
-  
-  // Status
-  status            BookingStatus @default(PENDING)
-  ownerResponseDate DateTime?
-  userConfirmedAt   DateTime?
-  
-  // Timeline
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  expiresAt         DateTime?     // Booking request expiration (24 hours by default)
-  confirmedAt       DateTime?
-  cancelledAt       DateTime?
-  cancellationReason String?      @db.Text
-  
-  // Relations
-  payment           Payment?
-  review            Review?
-  notifications     Notification[]
-  
+  id               String        @id @default(cuid())
+  propertyId       String
+  property         Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User          @relation("UserBookings", fields: [userId], references: [id], onDelete: Cascade)
+
+  moveInDate       DateTime
+  moveOutDate      DateTime?
+  message          String?       @db.Text    // Optional note from USER to OWNER
+  numberOfTenants  Int           @default(1)
+
+  // Pricing snapshot at time of booking (immune to future rent changes)
+  rentAmount       Float
+  bookingFee       Float         @default(0)
+  totalAmount      Float
+
+  status           BookingStatus @default(PENDING)
+  cancellationNote String?       @db.Text
+
+  expiresAt        DateTime?     // Auto-expire if Owner ignores for 24h
+  confirmedAt      DateTime?
+  cancelledAt      DateTime?
+
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // One payment and one review per booking (enforced by @unique on their FKs)
+  payment          Payment?
+  review           Review?
+  notifications    Notification[]
+
   @@index([propertyId])
   @@index([userId])
   @@index([status])
-  @@index([createdAt])
   @@map("bookings")
 }
 
-// Enhanced Payment Model with Multiple Payment Methods
+// Stripe payment — strictly one per Booking.
+// Created when Booking moves to PAYMENT_PENDING.
 model Payment {
-  id                String        @id @default(uuid())
-  bookingId         String        @unique
-  booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  userId            String
-  user              User          @relation(fields: [userId], references: [id])
-  
-  // Payment Details
-  amount            Float
-  paymentMethod     PaymentMethod
-  paymentGateway    PaymentGateway @default(STRIPE)
-  
-  // Transaction Details
-  transactionId     String?       @unique
-  gatewayTransactionId String?    @unique // ID from payment gateway
-  invoiceNumber     String?       @unique
-  
-  // Payment Status
-  status            PaymentStatus @default(PENDING)
-  failureReason     String?
-  failureCode       String?
-  
-  // Gateway Response
-  gatewayRequest    Json?         // Request sent to gateway
-  gatewayResponse   Json?         // Raw response from gateway
-  webhookData       Json?         // Webhook data from gateway
-  
-  // Refund Details
-  refundAmount      Float?        @default(0)
-  refundReason      String?
-  refundedAt        DateTime?
-  refundTransactionId String?
-  
-  // Timestamps
-  initiatedAt       DateTime      @default(now())
-  completedAt       DateTime?
-  updatedAt         DateTime      @updatedAt
-  
-  // Relations
-  paymentLogs       PaymentLog[]
-  
-  @@index([bookingId])
+  id                    String        @id @default(cuid())
+  bookingId             String        @unique   // One payment per booking
+  booking               Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id])
+
+  amount                Float
+  currency              String        @default("BDT")
+  status                PaymentStatus @default(PENDING)
+
+  // Stripe identifiers
+  stripePaymentIntentId String?       @unique
+  stripeSessionId       String?       @unique
+  receiptUrl            String?       // Stripe-hosted receipt link
+
+  // Refund details (populated if booking is cancelled post-payment)
+  refundAmount          Float?        @default(0)
+  refundedAt            DateTime?
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
   @@index([userId])
   @@index([status])
-  @@index([transactionId])
-  @@index([createdAt])
   @@map("payments")
 }
 
-// Payment Logs for Audit Trail
-model PaymentLog {
-  id          String        @id @default(uuid())
-  paymentId   String
-  payment     Payment       @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  action      String        // initiate, success, failure, webhook, refund
-  status      PaymentStatus
-  message     String?       @db.Text
-  metadata    Json?         // Additional data like IP, user agent, etc.
-  createdAt   DateTime      @default(now())
-  
-  @@index([paymentId])
-  @@index([createdAt])
-  @@map("payment_logs")
-}
-
-// Payment Method Configuration for Admin
-model PaymentMethodConfig {
-  id              String        @id @default(uuid())
-  gateway         PaymentGateway @unique
-  isActive        Boolean       @default(true)
-  config          Json          // Store gateway configuration
-  supportedMethods PaymentMethod[]
-  feePercentage   Float?        @default(0) // Platform fee percentage
-  feeFixed        Float?        @default(0) // Fixed platform fee
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  @@map("payment_method_configs")
-}
-
-// Review Model
+// Review written by a USER after a CONFIRMED booking.
+// Mirrors SkillBridge Review — same @unique bookingId guard (one review per booking).
+// tutorId → tutorProfileId pattern reproduced here as propertyId + ownerProfileId.
 model Review {
-  id                String        @id @default(uuid())
-  propertyId        String
-  property          Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  bookingId         String        @unique
-  booking           Booking       @relation(fields: [bookingId], references: [id])
-  userId            String
-  user              User          @relation(fields: [userId], references: [id])
-  
-  rating            Int           // 1-5 stars
-  comment           String?       @db.Text
-  isFlagged         Boolean       @default(false)
-  flagReason        String?
-  adminNote         String?       @db.Text
-  isPublished       Boolean       @default(true)
-  
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  
+  id         String       @id @default(cuid())
+  bookingId  String       @unique         // One review per booking
+  booking    Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User         @relation("UserReviews", fields: [userId], references: [id], onDelete: Cascade)
+
+  rating     Int          // 1–5 stars
+  comment    String?      @db.Text
+
+  isFlagged  Boolean      @default(false) // Owner flags → Admin reviews
+  isVisible  Boolean      @default(true)  // Admin can hide without deleting
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
   @@index([propertyId])
   @@index([userId])
-  @@index([rating])
-  @@unique([bookingId])
   @@map("reviews")
 }
 
-// Saved Properties (Favorites)
-model SavedProperty {
-  id                String        @id @default(uuid())
-  userId            String
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  propertyId        String
-  property          Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  
-  createdAt         DateTime      @default(now())
-  
-  @@unique([userId, propertyId])
-  @@map("saved_properties")
-}
-
-// Notification Model
+// In-app notification for USER and OWNER.
+// Triggered by: booking status changes, payment events, review flags.
+// bookingId is nullable — system notifications won't have a booking.
 model Notification {
-  id                String        @id @default(uuid())
-  userId            String
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bookingId         String?
-  booking           Booking?      @relation(fields: [bookingId], references: [id])
-  
-  title             String
-  message           String        @db.Text
-  type              String        // booking_update, payment, review, system, message
-  isRead            Boolean       @default(false)
-  readAt            DateTime?
-  metadata          Json?         // Additional data
-  actionUrl         String?       // URL to navigate when clicked
-  
-  createdAt         DateTime      @default(now())
-  
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  title     String
+  message   String   @db.Text
+  type      String   // "booking_update" | "payment" | "review" | "system"
+  isRead    Boolean  @default(false)
+  actionUrl String?  // Frontend route to navigate when clicked
+
+  createdAt DateTime @default(now())
+
   @@index([userId])
   @@index([isRead])
-  @@index([createdAt])
   @@map("notifications")
 }
 
-// Message/Chat Model
-model Message {
-  id                String        @id @default(uuid())
-  propertyId        String?
-  property          Property?     @relation(fields: [propertyId], references: [id])
-  senderId          String
-  sender            User          @relation("senderMessages", fields: [senderId], references: [id])
-  receiverId        String
-  receiver          User          @relation("receiverMessages", fields: [receiverId], references: [id])
-  
-  content           String        @db.Text
-  attachments       String[]      // Array of attachment URLs
-  isRead            Boolean       @default(false)
-  readAt            DateTime?
-  
-  createdAt         DateTime      @default(now())
-  
-  @@index([senderId, receiverId])
-  @@index([propertyId])
-  @@map("messages")
-}
-
-// Report Model
-model Report {
-  id                String        @id @default(uuid())
-  reporterId        String
-  reporter          User          @relation("reporterReports", fields: [reporterId], references: [id])
-  reportedUserId    String?
-  reportedUser      User?         @relation("reportedUserReports", fields: [reportedUserId], references: [id])
-  propertyId        String?
-  property          Property?     @relation(fields: [propertyId], references: [id])
-  
-  reason            String
-  description       String?       @db.Text
-  status            String        @default("PENDING") // PENDING, REVIEWED, RESOLVED, DISMISSED
-  adminNote         String?       @db.Text
-  resolvedBy        String?
-  resolvedAt        DateTime?
-  
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  
-  @@index([reporterId])
-  @@index([propertyId])
-  @@index([status])
-  @@map("reports")
-}
-
-// Blog Post Model
+// Blog post authored by ADMIN only.
+// Standalone content — no FK to properties or bookings.
 model BlogPost {
-  id                String        @id @default(uuid())
-  title             String
-  slug              String        @unique
-  excerpt           String        @db.Text
-  content           String        @db.Text
-  featuredImage     String?
-  authorId          String
-  author            User          @relation(fields: [authorId], references: [id])
-  
-  category          String?
-  tags              String[]
-  views             Int           @default(0)
-  isPublished       Boolean       @default(false)
-  publishedAt       DateTime?
-  
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  
+  id            String   @id @default(cuid())
+  authorId      String
+  author        User     @relation(fields: [authorId], references: [id])
+
+  title         String
+  slug          String   @unique
+  excerpt       String   @db.Text
+  content       String   @db.Text
+  featuredImage String?
+  tags          String[]
+  isPublished   Boolean  @default(false)
+  publishedAt   DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
   @@index([isPublished])
   @@index([slug])
   @@map("blog_posts")
 }
-
-// Analytics Model
-model Analytics {
-  id                String        @id @default(uuid())
-  date              DateTime      @default(now())
-  
-  // Daily metrics
-  totalUsers        Int           @default(0)
-  totalProperties   Int           @default(0)
-  totalBookings     Int           @default(0)
-  totalRevenue      Float         @default(0)
-  newUsers          Int           @default(0)
-  newProperties     Int           @default(0)
-  newBookings       Int           @default(0)
-  
-  // Platform metrics
-  activeUsers       Int           @default(0)
-  activeProperties  Int           @default(0)
-  pendingProperties Int           @default(0)
-  
-  // Payment metrics
-  totalTransactions Int           @default(0)
-  successfulPayments Int          @default(0)
-  failedPayments    Int           @default(0)
-  totalPlatformFee  Float         @default(0)
-  
-  metadata          Json?         // Additional metrics
-  
-  @@unique([date])
-  @@map("analytics")
-}
-
-// Session Model for Redis alternative (optional)
-model Session {
-  id              String        @id @default(uuid())
-  userId          String
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token           String        @unique
-  refreshToken    String?       @unique
-  expiresAt       DateTime
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  @@index([token])
-  @@index([userId])
-  @@map("sessions")
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// generator client {
-//   provider = "prisma-client"
-//   output   = "../generated/prisma"
-// }
-
-// datasource db {
-//   provider = "postgresql"
-// }
-
-// model User {
-//     id        String   @id @default(uuid())
-//     email     String   @unique
-//     name      String?
-//     createdAt DateTime @default(now())
-//     updatedAt DateTime @updatedAt
-// }
