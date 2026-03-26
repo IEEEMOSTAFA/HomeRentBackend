@@ -222,7 +222,70 @@ RentHome is a production-grade rental property platform built for Bangladesh. It
 | GET | `/api/notifications` | Auth | Get user notifications |
 | PATCH | `/api/notifications/:id/read` | Auth | Mark as read |
 
-### 5.8 Blog
+### 5.8 Images (Cloudinary)
+| Method | Route | Access | Description |
+|--------|-------|--------|-------------|
+| POST | `/api/images/upload` | Auth | Upload single image |
+| POST | `/api/images/upload-multiple` | Auth | Upload multiple images (max 10) |
+| DELETE | `/api/images/:imageUrl` | Auth | Delete single image |
+| POST | `/api/images/delete-multiple` | Auth | Delete multiple images |
+
+**Image Upload Details:**
+- **Supported formats:** JPEG, PNG, WebP, GIF
+- **Max file size:** 5MB per image
+- **Max images per request:** 10 (batch upload)
+- **Storage:** Cloudinary CDN (secure_url)
+- **Folder structure:** `/homerent` by default, customizable via `folder` field in request body
+- **Response:** Returns array of secure Cloudinary URLs for storage in database
+- **DELETE format:** URL should be encoded when passed as URL parameter
+
+**Upload Single Example:**
+```
+POST /api/images/upload
+Content-Type: multipart/form-data
+
+{
+  "image": <binary>,
+  "folder": "homerent/properties" (optional)
+}
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Image uploaded successfully",
+  "data": {
+    "url": "https://res.cloudinary.com/...",
+    "filename": "property.jpg",
+    "size": 245789
+  }
+}
+```
+
+**Upload Multiple Example:**
+```
+POST /api/images/upload-multiple
+Content-Type: multipart/form-data
+
+{
+  "images": [<binary1>, <binary2>, ...],
+  "folder": "homerent/properties" (optional)
+}
+
+Response:
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "3 image(s) uploaded successfully",
+  "data": {
+    "urls": ["https://res.cloudinary.com/...", ...],
+    "count": 3,
+    "filenames": ["img1.jpg", "img2.jpg", "img3.jpg"]
+  }
+}
+```
+
+### 5.9 Blog
 | Method | Route | Access | Description |
 |--------|-------|--------|-------------|
 | GET | `/api/blog` | Public | List published posts |
@@ -230,7 +293,7 @@ RentHome is a production-grade rental property platform built for Bangladesh. It
 | POST | `/api/blog` | Admin | Create blog post |
 | PATCH | `/api/blog/:id/publish` | Admin | Publish/unpublish |
 
-### 5.9 AI
+### 5.10 AI
 | Method | Route | Access | Description |
 |--------|-------|--------|-------------|
 | POST | `/api/ai/describe` | Owner | Generate property description |

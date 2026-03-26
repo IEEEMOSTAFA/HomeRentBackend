@@ -8,6 +8,7 @@ import { OwnerRoutes } from "./modules/Owner/owner.route";
 import { UserRoutes } from "./modules/User/user.route";
 import { AdminRoutes } from "./modules/Admin/admin.route";
 import { PaymentRoutes } from "./modules/Payment";
+import { ImageRoutes } from "./modules/Image/image.routes";
 
 // import authExtraRoutes from "./routes/auth.extra";
 
@@ -42,15 +43,15 @@ const app: Application = express();
 
 // Updated::
 
-// app.use(
-//   cors({
-//     origin: [
-//       "https://edtech-frontend-flax.vercel.app",
-//       "http://localhost:3000"
-//     ],
-//     credentials: true,
-//   })
-// );
+app.use(
+  cors({
+    origin: [
+      
+      "http://localhost:3000"
+    ],
+    credentials: true,
+  })
+);
 
 
 
@@ -84,6 +85,7 @@ app.use("/api/owner", OwnerRoutes);
 app.use("/api/users", UserRoutes);
 app.use("/api/admin", AdminRoutes);
 app.use("/api/payments", PaymentRoutes);
+app.use("/api/images", ImageRoutes);
 
 // ================= HEALTH CHECK =================
 app.get("/", (req, res) => {

@@ -7,7 +7,7 @@ dist
 
 cd my-new-project
 # Using full command
-apollo-cli generate module User
+---  apollo-cli generate module User
 
 # Using alias
 apollo-cli g module User
