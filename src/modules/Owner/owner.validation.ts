@@ -100,9 +100,9 @@ export const updateOwnerProfileValidationSchema = z.object({
 
 // ================= RESPOND TO BOOKING VALIDATION =================
 export const respondToBookingValidationSchema = z.object({
-  status: z.enum(["ACCEPTED", "DECLINED"], {
-    errorMap: () => ({ message: "Status must be ACCEPTED or DECLINED" }),
-  }),
+  status: z
+    .enum(["ACCEPTED", "DECLINED"])
+    .describe("Status must be ACCEPTED or DECLINED"),
   declineReason: z
     .string()
     .max(500, "Decline reason must be less than 500 characters")

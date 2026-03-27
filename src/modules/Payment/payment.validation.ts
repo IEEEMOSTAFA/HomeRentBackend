@@ -8,7 +8,7 @@ import { z } from "zod";
  */
 export const createPaymentIntentSchema = z.object({
   body: z.object({
-    bookingId: z.string().cuid("Invalid booking ID").describe("Booking ID"),
+    bookingId: z.string().cuid().describe("Booking ID"),
   }),
 });
 
@@ -26,7 +26,7 @@ export const confirmPaymentSchema = z.object({
       .string()
       .min(1, "Payment Intent ID is required")
       .describe("Stripe Payment Intent ID"),
-    bookingId: z.string().cuid("Invalid booking ID").describe("Booking ID"),
+    bookingId: z.string().cuid().describe("Booking ID"),
   }),
 });
 
@@ -37,7 +37,7 @@ export type ConfirmPaymentInput = z.infer<typeof confirmPaymentSchema>["body"];
  */
 export const getPaymentByBookingIdSchema = z.object({
   params: z.object({
-    bookingId: z.string().cuid("Invalid booking ID").describe("Booking ID"),
+    bookingId: z.string().cuid().describe("Booking ID"),
   }),
 });
 
@@ -50,7 +50,7 @@ export type GetPaymentByBookingIdInput = z.infer<
  */
 export const getPaymentByIdSchema = z.object({
   params: z.object({
-    id: z.string().cuid("Invalid payment ID").describe("Payment ID"),
+    id: z.string().cuid().describe("Payment ID"),
   }),
 });
 
@@ -138,7 +138,7 @@ export type GetMyPaymentsInput = z.infer<typeof getMyPaymentsSchema>["query"];
  */
 export const refundPaymentSchema = z.object({
   body: z.object({
-    paymentId: z.string().cuid("Invalid payment ID").describe("Payment ID"),
+    paymentId: z.string().cuid().describe("Payment ID"),
     refundAmount: z
       .number()
       .positive("Refund amount must be positive")
@@ -175,7 +175,7 @@ export const stripeWebhookSchema = z.object({
       status: z.enum(["succeeded", "processing", "requires_payment_method"]),
       amount: z.number(),
       currency: z.string(),
-      metadata: z.record(z.string()).optional(),
+      metadata: z.record(z.string(), z.string()).optional(),
     }),
   }),
 });

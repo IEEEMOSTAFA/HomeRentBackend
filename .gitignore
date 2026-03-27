@@ -33,3 +33,11 @@ apollo-cli prisma generate
 
 # Run Migrations (runs: npx prisma migrate dev)
 apollo-cli prisma migrate
+
+# To generate stripe webhook secret run :
+
+ stripe listen --forward-to localhost:5000/api/payments/webhook
+ 
+# For Running seed (Mainly Admin) in in prisma : use the command:
+
+npm run seed

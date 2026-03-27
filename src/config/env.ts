@@ -7,7 +7,7 @@ import { z } from 'zod';
 const envSchema = z.object({
   // Core Configuration
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().transform((v) => parseInt(v, 10)).pipe(z.number().min(1).max(65535)).default('5000'),
+  PORT: z.string().transform((v) => parseInt(v, 10)).pipe(z.number().min(1).max(65535)).default(5000),
   APP_URL: z.string().url(),
   
   // Database
@@ -30,8 +30,9 @@ const envSchema = z.object({
   CLOUDINARY_API_SECRET: z.string().min(1, 'CLOUDINARY_API_SECRET is required'),
   
   // Stripe Configuration
-  PUBLISH_KEY: z.string().min(1, 'PUBLISH_KEY (Stripe) is required'),
-  SECRET_KEY: z.string().min(1, 'SECRET_KEY (Stripe) is required'),
+  STRIPE_PUBLISH_KEY: z.string().min(1, 'STRIPE_PUBLISH_KEY is required'),
+  STRIPE_SECRET_KEY: z.string().min(1, 'STRIPE_SECRET_KEY is required'),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1, 'STRIPE_WEBHOOK_SECRET is required'),
   
   // Email Configuration (Optional - for email notifications)
   APP_USER: z.string().email('APP_USER must be valid email').optional(),
@@ -99,10 +100,11 @@ export const envConfig = {
     apiSecret: env.CLOUDINARY_API_SECRET,
   },
 
-  // Stripe
+  // Stripe Configuration
   stripe: {
-    publishKey: env.PUBLISH_KEY,
-    secretKey: env.SECRET_KEY,
+    publishKey: env.STRIPE_PUBLISH_KEY,
+    secretKey: env.STRIPE_SECRET_KEY,
+    webhookSecret: env.STRIPE_WEBHOOK_SECRET,
   },
 
   // Email (Optional)

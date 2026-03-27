@@ -25,9 +25,15 @@ const initializeStripe = (): StripeClient => {
         httpStatus.INTERNAL_SERVER_ERROR
       );
     }
-stripeInstance = new Stripe(secretKey, {
-      apiVersion: "2024-10-28.acacia",
-    });
+    stripeInstance = new Stripe(secretKey);
+  }
+  return stripeInstance;
+};
+
+// Initialize Stripe instance immediately on module load
+const getStripeInstance = (): StripeClient => {
+  if (!stripeInstance) {
+    return initializeStripe();
   }
   return stripeInstance;
 };
@@ -104,7 +110,8 @@ const createPaymentIntentFromDB = async (
   }
 
   // Create Stripe PaymentIntent
-  const paymentIntent = await stripeInstance!.paymentIntents.create({
+  const stripe = getStripeInstance();
+  const paymentIntent = await stripe.paymentIntents.create({
     amount: Math.round(booking.totalAmount * 100), // Convert to cents
     currency: PaymentDefaults.CURRENCY.toLowerCase(),
     description: `Booking for ${booking.property.title}`,
@@ -174,7 +181,8 @@ const confirmPaymentIntoDB = async (
   }
 
   // Retrieve PaymentIntent from Stripe to confirm status
-  const paymentIntent = await stripeInstance!.paymentIntents.retrieve(
+  const stripe = getStripeInstance();
+  const paymentIntent = await stripe.paymentIntents.retrieve(
     data.paymentIntentId
   );
 
@@ -457,7 +465,8 @@ const refundPaymentIntoDB = async (
   }
 
   // Create Stripe refund
-  const refund = await stripeInstance!.refunds.create({
+  const stripe = getStripeInstance();
+  const refund = await stripe.refunds.create({
     payment_intent: payment.stripePaymentIntentId!,
     amount: Math.round(refundAmount * 100), // Convert to cents
   });

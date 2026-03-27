@@ -10,14 +10,6 @@ import { AdminRoutes } from "./modules/Admin/admin.route";
 import { PaymentRoutes } from "./modules/Payment";
 import { ImageRoutes } from "./modules/Image/image.routes";
 
-// import authExtraRoutes from "./routes/auth.extra";
-
-// import { categoryRouter } from "./modules/category/category.router";
-// import { tutorRouter } from "./modules/tutor/tutor.router";
-// import { bookingRouter } from "./modules/booking/booking.router";
-// import { reviewRouter } from "./modules/review/review.router";
-// import { adminRouter } from "./modules/admin/admin.router";
-// import { studentRouter } from "./modules/student/student.router";
 
 
 
@@ -58,33 +50,27 @@ app.use(
 // ================= AUTH ROUTES FIRST =================
 app.use("/api/auth", authExtraRoutes);
 
-// ================= STRIPE WEBHOOK (BEFORE JSON PARSER) =================
-// Webhook must use raw body, so it's registered before express.json()
-app.post(
-  "/api/payments/webhook",
-  express.raw({ type: "application/json" }),
-  PaymentRoutes
-);
+
 
 // ================= BETTER-AUTH HANDLER =================
 // Use regex pattern to match all /api/auth/* routes for better-auth
 app.use("/api/auth", toNodeHandler(auth));
 
-// ================= BODY PARSER AFTER AUTH =================
+// ================= STRIPE WEBHOOK (BEFORE JSON PARSER) =================
+// CRITICAL: Webhook must use raw body, register BEFORE express.json()
+// The PaymentRoutes include raw body middleware internally
+app.use("/api/payments", PaymentRoutes);
+
+// ================= BODY PARSER (AFTER WEBHOOK) =================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ================= FEATURE ROUTES =================
-// app.use("/api/admin", adminRouter);
-// app.use("/api/tutors", tutorRouter);
-// app.use("/api/bookings", bookingRouter);
-// app.use("/api/reviews", reviewRouter);
-// app.use("/api/categories", categoryRouter);
-// app.use("/api/dashboard", studentRouter);
+
 app.use("/api/owner", OwnerRoutes);
+
 app.use("/api/users", UserRoutes);
 app.use("/api/admin", AdminRoutes);
-app.use("/api/payments", PaymentRoutes);
 app.use("/api/images", ImageRoutes);
 
 // ================= HEALTH CHECK =================
@@ -96,94 +82,3 @@ app.get("/", (req, res) => {
 app.use(errorHandler);
 
 export default app;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import express, { Application, Request, Response } from 'express';
-// import cors from 'cors';
-
-// const app: Application = express();
-
-// // parsers
-// app.use(express.json());
-// app.use(cors());
-
-// // application routes
-// // app.use('/api/v1', router);
-
-// app.get('/', (req: Request, res: Response) => {
-//   res.send('Hello from Apollo Gears World!');
-// });
-
-// export default app;
