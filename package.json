@@ -11,10 +11,10 @@
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write .",
     "stripe-webhook": "stripe listen --forward-to localhost:5000/webhook",
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node src/scripts/seed.ts"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node src/scripts/seed.ts"
   },
   "keywords": [
     "express",

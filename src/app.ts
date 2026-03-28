@@ -45,7 +45,9 @@ app.use(
   })
 );
 
-
+// ================= BODY PARSER (AFTER WEBHOOK) =================
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ================= AUTH ROUTES FIRST =================
 app.use("/api/auth", authExtraRoutes);
@@ -61,9 +63,7 @@ app.use("/api/auth", toNodeHandler(auth));
 // The PaymentRoutes include raw body middleware internally
 app.use("/api/payments", PaymentRoutes);
 
-// ================= BODY PARSER (AFTER WEBHOOK) =================
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
 
 // ================= FEATURE ROUTES =================
 

@@ -31,6 +31,9 @@ export const auth = betterAuth({
         type: "string",
         defaultValue: "USER", // USER | OWNER | ADMIN
         required: false,
+        input: true, 
+
+        
       },
       isActive: {
         type: "boolean",
@@ -50,6 +53,7 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: true,
     autoSignIn: false,
+
   },
 
   // ================= EMAIL VERIFICATION =================

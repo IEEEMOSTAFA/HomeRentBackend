@@ -2,7 +2,8 @@ node_modules
 dist
 .env
 
-
+# Seed file (contains admin credentials)
+src/scripts/seed.ts
 # Important: You must run this command inside your project directory.
 
 cd my-new-project
