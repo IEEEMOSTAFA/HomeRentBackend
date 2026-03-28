@@ -65,7 +65,9 @@ export const createPropertyValidationSchema = z.object({
     .default(false),
   availableFrom: z
     .string()
-    .datetime("Must be a valid ISO datetime"),
+    .refine((val) => !isNaN(Date.parse(val)), {
+    message: "Must be a valid ISO datetime",
+  }),
   availableFor: z
     .enum(["FAMILY", "BACHELOR", "CORPORATE", "ANY"])
     .optional()

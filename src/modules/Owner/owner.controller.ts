@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import catchAsync from "../../shared/catchAsync";
 // import { sendResponse } from "../../shared/sendResponse";
-import { AppError } from "../../errorsHelpers/AppError";
+import AppError from "../../errors/AppError";
 import { OwnerService } from "./owner.service";
 import { OwnerMessages, OwnerErrors } from "./owner.constant";
 import {
