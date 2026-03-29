@@ -10,6 +10,7 @@ import { AdminRoutes } from "./modules/Admin/admin.route";
 import { PaymentRoutes } from "./modules/Payment";
 import { ImageRoutes } from "./modules/Image/image.routes";
 import { PropertyRoutes } from "./modules/Property/property.route";
+import { BookingRoutes } from "./modules/Booking/booking.route";
 
 
 
@@ -73,7 +74,7 @@ app.use("/api/owner", OwnerRoutes);
 app.use("/api/users", UserRoutes);
 app.use("/api/admin", AdminRoutes);
 app.use("/api/images", ImageRoutes);
-
+app.use("/api/bookings", BookingRoutes);
 // ================= HEALTH CHECK =================
 app.get("/", (req, res) => {
   res.send("HomeRent API is running ");
