@@ -1,22 +1,7 @@
 import httpStatus from "http-status";
 import { Request, Response, NextFunction } from "express";
-import {
-  getPendingPropertiesFromDB,
-  approvePropertyIntoDB,
-  deletePropertyFromDB,
-  verifyOwnerIntoDB,
-  getUnverifiedOwnersFromDB,
-  getFlaggedReviewsFromDB,
-  hideReviewIntoDB,
-  refundPaymentIntoDB,
-  getAllPaymentsFromDB,
-  createBlogPostIntoDB,
-  updateBlogPostIntoDB,
-  publishBlogPostIntoDB,
-  deleteBlogPostFromDB,
-  getAllBlogPostsFromDB,
-  getAnalyticsFromDB,
-} from "./admin.service";
+// import { AdminService } from "./admin.service";
+import { AdminService } from "./admin.service";
 import { AdminMessages, AdminErrors } from "./admin.constant";
 import {
   approvePropertyValidationSchema,
@@ -54,7 +39,7 @@ const getPendingPropertiesHandler = async (
     const pageSize = parseInt(req.query.pageSize as string) || 20;
     const search = req.query.search as string;
 
-    const result = await getPendingPropertiesFromDB(
+    const result = await AdminService.getPendingProperties(
       page,
       pageSize,
       search
@@ -84,7 +69,7 @@ const approvePropertyHandler = async (
       return handleValidationError(res, validation.error);
     }
 
-    const property = await approvePropertyIntoDB(
+    const property = await AdminService.approveProperty(
       propertyId,
       validation.data
     );
@@ -112,7 +97,7 @@ const deletePropertyHandler = async (
   try {
     const propertyId = req.params.id as string;
 
-    await deletePropertyFromDB(propertyId);
+    await AdminService.deleteProperty(propertyId);
 
     res.status(httpStatus.OK).json({
       success: true,
@@ -139,7 +124,7 @@ const verifyOwnerHandler = async (
       return handleValidationError(res, validation.error);
     }
 
-    const ownerProfile = await verifyOwnerIntoDB(
+    const ownerProfile = await AdminService.verifyOwner(
       ownerId,
       validation.data
     );
@@ -167,7 +152,7 @@ const getUnverifiedOwnersHandler = async (
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 20;
 
-    const result = await getUnverifiedOwnersFromDB(page, pageSize);
+    const result = await AdminService.getUnverifiedOwners(page, pageSize);
 
     res.status(httpStatus.OK).json({
       success: true,
@@ -191,7 +176,7 @@ const getFlaggedReviewsHandler = async (
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 20;
 
-    const result = await getFlaggedReviewsFromDB(page, pageSize);
+    const result = await AdminService.getFlaggedReviews(page, pageSize);
 
     res.status(httpStatus.OK).json({
       success: true,
@@ -217,7 +202,7 @@ const hideReviewHandler = async (
       return handleValidationError(res, validation.error);
     }
 
-    const review = await hideReviewIntoDB(reviewId, validation.data);
+    const review = await AdminService.hideReview(reviewId, validation.data);
 
     const message = validation.data.isVisible
       ? AdminMessages.REVIEW_UNHIDDEN
@@ -248,7 +233,7 @@ const refundPaymentHandler = async (
       return handleValidationError(res, validation.error);
     }
 
-    const payment = await refundPaymentIntoDB(
+    const payment = await AdminService.refundPayment(
       paymentId,
       validation.data
     );
@@ -273,7 +258,7 @@ const getAllPaymentsHandler = async (
     const pageSize = parseInt(req.query.pageSize as string) || 20;
     const status = req.query.status as string;
 
-    const result = await getAllPaymentsFromDB(page, pageSize, status);
+    const result = await AdminService.getAllPayments(page, pageSize, status);
 
     res.status(httpStatus.OK).json({
       success: true,
@@ -305,7 +290,7 @@ const createBlogPostHandler = async (
       return handleValidationError(res, validation.error);
     }
 
-    const blogPost = await createBlogPostIntoDB(adminId, validation.data);
+    const blogPost = await AdminService.createBlogPost(adminId, validation.data);
 
     res.status(httpStatus.CREATED).json({
       success: true,
@@ -330,7 +315,7 @@ const updateBlogPostHandler = async (
       return handleValidationError(res, validation.error);
     }
 
-    const blogPost = await updateBlogPostIntoDB(postId, validation.data);
+    const blogPost = await AdminService.updateBlogPost(postId, validation.data);
 
     res.status(httpStatus.OK).json({
       success: true,
@@ -355,7 +340,7 @@ const publishBlogPostHandler = async (
       return handleValidationError(res, validation.error);
     }
 
-    const blogPost = await publishBlogPostIntoDB(
+    const blogPost = await AdminService.publishBlogPost(
       postId,
       validation.data
     );
@@ -382,7 +367,7 @@ const deleteBlogPostHandler = async (
   try {
     const postId = req.params.id as string;
 
-    await deleteBlogPostFromDB(postId);
+    await AdminService.deleteBlogPost(postId);
 
     res.status(httpStatus.OK).json({
       success: true,
@@ -403,7 +388,7 @@ const getAllBlogPostsHandler = async (
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 20;
 
-    const result = await getAllBlogPostsFromDB(page, pageSize);
+    const result = await AdminService.getAllBlogPosts(page, pageSize);
 
     res.status(httpStatus.OK).json({
       success: true,
@@ -424,7 +409,7 @@ const getAnalyticsHandler = async (
   next: NextFunction
 ) => {
   try {
-    const analytics = await getAnalyticsFromDB();
+    const analytics = await AdminService.getAnalytics();
 
     res.status(httpStatus.OK).json({
       success: true,

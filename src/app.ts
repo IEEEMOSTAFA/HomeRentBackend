@@ -9,6 +9,7 @@ import { UserRoutes } from "./modules/User/user.route";
 import { AdminRoutes } from "./modules/Admin/admin.route";
 import { PaymentRoutes } from "./modules/Payment";
 import { ImageRoutes } from "./modules/Image/image.routes";
+import { PropertyRoutes } from "./modules/Property/property.route";
 
 
 
@@ -66,7 +67,7 @@ app.use("/api/payments", PaymentRoutes);
 
 
 // ================= FEATURE ROUTES =================
-
+app.use("/api/properties", PropertyRoutes);
 app.use("/api/owner", OwnerRoutes);
 
 app.use("/api/users", UserRoutes);
