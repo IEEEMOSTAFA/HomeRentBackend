@@ -1,16 +1,16 @@
-// class AppError extends Error {
-//     public statusCode: number;
+import httpStatus from "http-status";
 
-//     constructor(statusCode: number, message: string, stack = '') {
-//         super(message) // Error("My Error Message")
-//         this.statusCode = statusCode;
+// ================= APP ERROR CLASS =================
+export class AppError extends Error {
+  statusCode: number;
 
-//         if (stack) {
-//             this.stack = stack;
-//         } else {
-//             Error.captureStackTrace(this, this.constructor)
-//         }
-//     }
-// }
+  constructor(message: string, statusCode: number = httpStatus.INTERNAL_SERVER_ERROR) {
+    super(message);
+    this.statusCode = statusCode;
 
-// export default AppError;
+    // Maintain proper prototype chain
+    Object.setPrototypeOf(this, AppError.prototype);
+  }
+}
+
+export default AppError;

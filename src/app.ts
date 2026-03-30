@@ -11,6 +11,9 @@ import { PaymentRoutes } from "./modules/Payment";
 import { ImageRoutes } from "./modules/Image/image.routes";
 import { PropertyRoutes } from "./modules/Property/property.route";
 import { BookingRoutes } from "./modules/Booking/booking.route";
+import { ReviewRoutes } from "./modules/Review/review.route";
+import { NotificationRoutes } from "./modules/Notification/notification.route";
+import { BlogRoutes } from "./modules/Blog/blog.route";
 
 
 
@@ -75,6 +78,9 @@ app.use("/api/users", UserRoutes);
 app.use("/api/admin", AdminRoutes);
 app.use("/api/images", ImageRoutes);
 app.use("/api/bookings", BookingRoutes);
+app.use("/api/reviews", ReviewRoutes); 
+app.use("/api/notifications", NotificationRoutes); // Add this line
+app.use("/api/blog", BlogRoutes);
 // ================= HEALTH CHECK =================
 app.get("/", (req, res) => {
   res.send("HomeRent API is running ");
