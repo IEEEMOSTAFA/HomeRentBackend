@@ -16,9 +16,9 @@ datasource db {
 // ─── ENUMS ────────────────────────────────────────────────────────────────────
 
 enum UserRole {
-  ADMIN  // Controls platform: approve/reject listings, ban users, manage blog
-  OWNER  // Posts and manages property listings, responds to bookings
-  USER   // Searches properties, makes bookings, pays, leaves reviews
+  ADMIN // Controls platform: approve/reject listings, ban users, manage blog
+  OWNER // Posts and manages property listings, responds to bookings
+  USER // Searches properties, makes bookings, pays, leaves reviews
   // Role is fixed at registration — only Admin can change it
 }
 
@@ -32,7 +32,7 @@ enum PropertyType {
 }
 
 enum PropertyStatus {
-  PENDING  // Submitted by Owner, waiting for Admin approval
+  PENDING // Submitted by Owner, waiting for Admin approval
   APPROVED // Publicly visible
   REJECTED // Rejected by Admin with a written reason
 }
@@ -45,18 +45,18 @@ enum AvailableFor {
 }
 
 enum BookingStatus {
-  PENDING         // USER submitted, waiting for OWNER response
-  ACCEPTED        // OWNER accepted, waiting for payment
+  PENDING // USER submitted, waiting for OWNER response
+  ACCEPTED // OWNER accepted, waiting for payment
   PAYMENT_PENDING // Stripe session created, not yet paid
-  CONFIRMED       // Payment successful — booking is live
-  DECLINED        // OWNER declined the request
-  CANCELLED       // USER cancelled before confirmation
+  CONFIRMED // Payment successful — booking is live
+  DECLINED // OWNER declined the request
+  CANCELLED // USER cancelled before confirmation
 }
 
 enum PaymentStatus {
-  PENDING  // Stripe session initiated
-  SUCCESS  // Stripe confirmed payment
-  FAILED   // Stripe payment failed
+  PENDING // Stripe session initiated
+  SUCCESS // Stripe confirmed payment
+  FAILED // Stripe payment failed
   REFUNDED // Refunded after cancellation
 }
 
@@ -68,28 +68,30 @@ model User {
   name          String
   email         String    @unique
   emailVerified Boolean   @default(false)
-  image         String?                       // Profile photo URL (Cloudinary)
-  role          UserRole  @default(USER)      // Fixed at signup
+  otp           String?
+  otpExpiry     DateTime?
+  image         String? // Profile photo URL (Cloudinary)
+  role          UserRole  @default(USER) // Fixed at signup
   isActive      Boolean   @default(true)
-  isBanned      Boolean   @default(false)     // Admin can ban harmful users
+  isBanned      Boolean   @default(false) // Admin can ban harmful users
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   // BetterAuth relations (do not modify)
-  accounts      Account[]
-  sessions      Session[]
+  accounts Account[]
+  sessions Session[]
 
   // OWNER-only relations
-  ownerProfile  OwnerProfile?
-  properties    Property[]
+  ownerProfile OwnerProfile?
+  properties   Property[]
 
   // USER-only relations
-  bookings      Booking[]       @relation("UserBookings")
-  payments      Payment[]
-  reviews       Review[]        @relation("UserReviews")
+  bookings Booking[] @relation("UserBookings")
+  payments Payment[]
+  reviews  Review[]  @relation("UserReviews")
 
   // ADMIN-only relations
-  blogPosts     BlogPost[]
+  blogPosts BlogPost[]
 
   // Both USER and OWNER receive notifications
   notifications Notification[]
@@ -153,23 +155,23 @@ model Verification {
 // Created automatically when a user registers with role=OWNER.
 // Deleted automatically if the Owner account is deleted (Cascade).
 model OwnerProfile {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  phone           String?
-  nidNumber       String?               // National ID for verification
-  verified        Boolean  @default(false)    // Admin verifies the owner
-  verifiedAt      DateTime?
+  phone      String?
+  nidNumber  String? // National ID for verification
+  verified   Boolean   @default(false) // Admin verifies the owner
+  verifiedAt DateTime?
 
   // Stats (denormalized for fast dashboard queries — mirrors TutorProfile.rating)
-  totalProperties Int      @default(0)
-  totalEarnings   Float    @default(0)
-  rating          Float    @default(0)
-  totalReviews    Int      @default(0)
+  totalProperties Int   @default(0)
+  totalEarnings   Float @default(0)
+  rating          Float @default(0)
+  totalReviews    Int   @default(0)
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("owner_profiles")
 }
@@ -178,51 +180,51 @@ model OwnerProfile {
 // Cascade delete: if Owner is deleted → all their properties are deleted.
 // Cascade delete: if Property is deleted → its Bookings, Reviews are deleted.
 model Property {
-  id              String         @id @default(cuid())
-  ownerId         String
-  owner           User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   title           String
   description     String         @db.Text
   type            PropertyType
   status          PropertyStatus @default(PENDING)
-  rejectionReason String?        @db.Text    // Written by Admin on rejection
+  rejectionReason String?        @db.Text // Written by Admin on rejection
 
   // Location
-  city            String
-  area            String
-  address         String         @db.Text
+  city    String
+  area    String
+  address String @db.Text
 
   // Details
-  bedrooms        Int            @default(0)
-  bathrooms       Int            @default(0)
-  size            Float?                      // sqft, optional
+  bedrooms  Int    @default(0)
+  bathrooms Int    @default(0)
+  size      Float? // sqft, optional
 
   // Pricing
-  rentAmount      Float
-  advanceDeposit  Float          @default(0)
-  bookingFee      Float          @default(0) // Charged at booking confirmation
-  isNegotiable    Boolean        @default(false)
+  rentAmount     Float
+  advanceDeposit Float   @default(0)
+  bookingFee     Float   @default(0) // Charged at booking confirmation
+  isNegotiable   Boolean @default(false)
 
   // Availability
-  availableFrom   DateTime
-  availableFor    AvailableFor   @default(ANY)
+  availableFrom DateTime
+  availableFor  AvailableFor @default(ANY)
 
   // Media — array of Cloudinary image URLs (up to 10)
-  images          String[]
+  images String[]
 
   // Denormalized stats (updated on review/booking events)
-  rating          Float          @default(0)
-  totalReviews    Int            @default(0)
-  views           Int            @default(0)
+  rating       Float @default(0)
+  totalReviews Int   @default(0)
+  views        Int   @default(0)
 
-  publishedAt     DateTime?      // Stamped when Admin approves
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  publishedAt DateTime? // Stamped when Admin approves
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Relations
-  bookings        Booking[]
-  reviews         Review[]
+  bookings Booking[]
+  reviews  Review[]
 
   @@index([ownerId])
   @@index([status])
@@ -241,36 +243,36 @@ model Property {
 //
 // Mirror of SkillBridge Booking — same named relations pattern used.
 model Booking {
-  id               String        @id @default(cuid())
-  propertyId       String
-  property         Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  userId           String
-  user             User          @relation("UserBookings", fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation("UserBookings", fields: [userId], references: [id], onDelete: Cascade)
 
-  moveInDate       DateTime
-  moveOutDate      DateTime?
-  message          String?       @db.Text    // Optional note from USER to OWNER
-  numberOfTenants  Int           @default(1)
+  moveInDate      DateTime
+  moveOutDate     DateTime?
+  message         String?   @db.Text // Optional note from USER to OWNER
+  numberOfTenants Int       @default(1)
 
   // Pricing snapshot at time of booking (immune to future rent changes)
-  rentAmount       Float
-  bookingFee       Float         @default(0)
-  totalAmount      Float
+  rentAmount  Float
+  bookingFee  Float @default(0)
+  totalAmount Float
 
   status           BookingStatus @default(PENDING)
   cancellationNote String?       @db.Text
 
-  expiresAt        DateTime?     // Auto-expire if Owner ignores for 24h
-  confirmedAt      DateTime?
-  cancelledAt      DateTime?
+  expiresAt   DateTime? // Auto-expire if Owner ignores for 24h
+  confirmedAt DateTime?
+  cancelledAt DateTime?
 
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // One payment and one review per booking (enforced by @unique on their FKs)
-  payment          Payment?
-  review           Review?
-  notifications    Notification[]
+  payment       Payment?
+  review        Review?
+  notifications Notification[]
 
   @@index([propertyId])
   @@index([userId])
@@ -281,27 +283,27 @@ model Booking {
 // Stripe payment — strictly one per Booking.
 // Created when Booking moves to PAYMENT_PENDING.
 model Payment {
-  id                    String        @id @default(cuid())
-  bookingId             String        @unique   // One payment per booking
-  booking               Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  userId                String
-  user                  User          @relation(fields: [userId], references: [id])
+  id        String  @id @default(cuid())
+  bookingId String  @unique // One payment per booking
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
 
-  amount                Float
-  currency              String        @default("BDT")
-  status                PaymentStatus @default(PENDING)
+  amount   Float
+  currency String        @default("BDT")
+  status   PaymentStatus @default(PENDING)
 
   // Stripe identifiers
-  stripePaymentIntentId String?       @unique
-  stripeSessionId       String?       @unique
-  receiptUrl            String?       // Stripe-hosted receipt link
+  stripePaymentIntentId String? @unique
+  stripeSessionId       String? @unique
+  receiptUrl            String? // Stripe-hosted receipt link
 
   // Refund details (populated if booking is cancelled post-payment)
-  refundAmount          Float?        @default(0)
-  refundedAt            DateTime?
+  refundAmount Float?    @default(0)
+  refundedAt   DateTime?
 
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -312,22 +314,22 @@ model Payment {
 // Mirrors SkillBridge Review — same @unique bookingId guard (one review per booking).
 // tutorId → tutorProfileId pattern reproduced here as propertyId + ownerProfileId.
 model Review {
-  id         String       @id @default(cuid())
-  bookingId  String       @unique         // One review per booking
-  booking    Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  bookingId  String   @unique // One review per booking
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   propertyId String
-  property   Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   userId     String
-  user       User         @relation("UserReviews", fields: [userId], references: [id], onDelete: Cascade)
+  user       User     @relation("UserReviews", fields: [userId], references: [id], onDelete: Cascade)
 
-  rating     Int          // 1–5 stars
-  comment    String?      @db.Text
+  rating  Int // 1–5 stars
+  comment String? @db.Text
 
-  isFlagged  Boolean      @default(false) // Owner flags → Admin reviews
-  isVisible  Boolean      @default(true)  // Admin can hide without deleting
+  isFlagged Boolean @default(false) // Owner flags → Admin reviews
+  isVisible Boolean @default(true) // Admin can hide without deleting
 
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([propertyId])
   @@index([userId])
@@ -345,10 +347,10 @@ model Notification {
   booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
   title     String
-  message   String   @db.Text
-  type      String   // "booking_update" | "payment" | "review" | "system"
-  isRead    Boolean  @default(false)
-  actionUrl String?  // Frontend route to navigate when clicked
+  message   String  @db.Text
+  type      String // "booking_update" | "payment" | "review" | "system"
+  isRead    Boolean @default(false)
+  actionUrl String? // Frontend route to navigate when clicked
 
   createdAt DateTime @default(now())
 
@@ -360,21 +362,21 @@ model Notification {
 // Blog post authored by ADMIN only.
 // Standalone content — no FK to properties or bookings.
 model BlogPost {
-  id            String   @id @default(cuid())
-  authorId      String
-  author        User     @relation(fields: [authorId], references: [id])
+  id       String @id @default(cuid())
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
 
   title         String
-  slug          String   @unique
-  excerpt       String   @db.Text
-  content       String   @db.Text
+  slug          String    @unique
+  excerpt       String    @db.Text
+  content       String    @db.Text
   featuredImage String?
   tags          String[]
-  isPublished   Boolean  @default(false)
+  isPublished   Boolean   @default(false)
   publishedAt   DateTime?
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isPublished])
   @@index([slug])

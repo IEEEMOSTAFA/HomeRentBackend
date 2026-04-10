@@ -24,13 +24,7 @@ import { BlogRoutes } from "./modules/Blog/blog.route";
 
 const app: Application = express();
 
-// ================= CORS =================
-// app.use(
-//   cors({
-//     origin: process.env.APP_URL || true,
-//     credentials: true,
-//   })
-// );
+
 
 
 
@@ -54,6 +48,11 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
+
+
+// /api/auth/me, /api/auth/update-role, /api/auth/verify-otp, /api/auth/resend-otp
+// app.use("/api/auth", authExtraRoutes);
 // ================= AUTH ROUTES FIRST =================
 app.use("/api/auth", authExtraRoutes);
 
@@ -62,7 +61,7 @@ app.use("/api/auth", authExtraRoutes);
 // ================= BETTER-AUTH HANDLER =================
 // Use regex pattern to match all /api/auth/* routes for better-auth
 app.use("/api/auth", toNodeHandler(auth));
-
+// app.use("/api/auth", otpRoutes);
 // ================= STRIPE WEBHOOK (BEFORE JSON PARSER) =================
 // CRITICAL: Webhook must use raw body, register BEFORE express.json()
 // The PaymentRoutes include raw body middleware internally

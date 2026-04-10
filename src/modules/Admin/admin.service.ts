@@ -410,54 +410,102 @@ const getAllBlogPostsFromDB = async (
 
 // ================= ANALYTICS SERVICES =================
 
+// ================= ANALYTICS SERVICES =================
+
 const getAnalyticsFromDB = async () => {
   const [
     totalUsers,
     totalOwners,
+    bannedUsers,
+    newUsersThisMonth,
     totalProperties,
     approvedProperties,
     pendingProperties,
     rejectedProperties,
     totalBookings,
     confirmedBookings,
+    pendingBookings,
+    cancelledBookings,
     totalReviews,
-    totalPayments,
     flaggedReviews,
-    bannedUsers,
+    hiddenReviews,
+    verifiedOwners,
+    unverifiedOwners,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.ownerProfile.count(),
+    prisma.user.count({ where: { isBanned: true } }),
+    
+    // New users this month
+    prisma.user.count({
+      where: {
+        createdAt: {
+          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+        },
+      },
+    }),
+
     prisma.property.count(),
     prisma.property.count({ where: { status: "APPROVED" } }),
     prisma.property.count({ where: { status: "PENDING" } }),
     prisma.property.count({ where: { status: "REJECTED" } }),
+
     prisma.booking.count(),
     prisma.booking.count({ where: { status: "CONFIRMED" } }),
+    prisma.booking.count({ where: { status: "PENDING" } }),
+    prisma.booking.count({ where: { status: "CANCELLED" } }),
+
     prisma.review.count(),
-    prisma.payment.count(),
     prisma.review.count({ where: { isFlagged: true } }),
-    prisma.user.count({ where: { isBanned: true } }),
+    prisma.review.count({ where: { isVisible: false } }),
+
+    prisma.ownerProfile.count({ where: { verified: true } }),
+    prisma.ownerProfile.count({ where: { verified: false } }),
   ]);
 
+  // Revenue calculation
   const revenue = await prisma.payment.aggregate({
     where: { status: "SUCCESS" },
     _sum: { amount: true },
   });
 
+  const revenueThisMonth = await prisma.payment.aggregate({
+    where: {
+      status: "SUCCESS",
+      createdAt: {
+        gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+      },
+    },
+    _sum: { amount: true },
+  });
+
+  const totalRefunds = await prisma.payment.aggregate({
+    where: { status: "REFUNDED" },
+    _sum: { refundAmount: true },
+  });
+
   return {
     totalUsers,
     totalOwners,
+    totalAdmins: 1, // আপাতত 1 রাখলাম, পরে ডাইনামিক করা যাবে
+    bannedUsers,
+    newUsersThisMonth,
     totalProperties,
     approvedProperties,
     pendingProperties,
     rejectedProperties,
     totalBookings,
     confirmedBookings,
-    totalReviews,
-    totalPayments,
+    pendingBookings,
+    cancelledBookings,
     totalRevenue: revenue._sum?.amount || 0,
+    revenueThisMonth: revenueThisMonth._sum?.amount || 0,
+    totalRefunds: totalRefunds._sum?.refundAmount || 0,
+    totalReviews,
     flaggedReviews,
-    bannedUsers,
+    hiddenReviews,
+    verifiedOwners,
+    unverifiedOwners,
   };
 };
 

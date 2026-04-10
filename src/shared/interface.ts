@@ -59,6 +59,7 @@ export interface IUser {
   name: string;
   email: string;
   emailVerified: boolean;
+  otp : string | null;
   image?: string;
   role: "ADMIN" | "OWNER" | "USER";
   isActive: boolean;

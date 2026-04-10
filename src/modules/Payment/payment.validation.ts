@@ -20,16 +20,38 @@ export type CreatePaymentIntentInput = z.infer<
  * Confirm Payment Schema
  * User confirms payment after Stripe frontend completes
  */
+// export const confirmPaymentSchema = z.object({
+//   body: z.object({
+//     paymentIntentId: z
+//       .string()
+//       .min(1, "Payment Intent ID is required")
+//       .describe("Stripe Payment Intent ID"),
+//     bookingId: z.string().cuid().optional().describe("Booking ID"), // optional — service finds booking via paymentIntentId
+//   }),
+// });
+/**
+ * Confirm Payment Schema
+ * User confirms payment after Stripe frontend completes
+ */
 export const confirmPaymentSchema = z.object({
   body: z.object({
-    paymentIntentId: z
+    paymentId: z
       .string()
-      .min(1, "Payment Intent ID is required")
+      .min(1, "Payment ID is required")
+      .cuid("Invalid Payment ID format")
+      .describe("Database Payment Record ID"),
+
+    stripePaymentIntentId: z
+      .string()
+      .min(1, "Stripe Payment Intent ID is required")
       .describe("Stripe Payment Intent ID"),
-    bookingId: z.string().cuid().optional().describe("Booking ID"), // optional — service finds booking via paymentIntentId
+      
+    // bookingId optional রাখা যেতে পারে (যদি দরকার হয়)
+    bookingId: z.string().cuid().optional().describe("Booking ID"),
   }),
 });
 
+// export type ConfirmPaymentInput = z.infer<typeof confirmPaymentSchema>["body"];
 export type ConfirmPaymentInput = z.infer<typeof confirmPaymentSchema>["body"];
 
 /**

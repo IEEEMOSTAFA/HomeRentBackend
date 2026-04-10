@@ -9,6 +9,7 @@ src/scripts/seed.ts
 cd my-new-project
 # Using full command
 ---  apollo-cli generate module User
+---  apollo-cli generate module Notification
 
 # Using alias
 apollo-cli g module User
