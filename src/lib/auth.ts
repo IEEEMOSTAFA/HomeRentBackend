@@ -57,23 +57,7 @@ export const auth = betterAuth({
   // ================= EMAIL VERIFICATION =================
   emailVerification: {
     sendOnSignUp: true,
-    // autoSignInAfterVerification: true,
-    // sendVerificationEmail: async ({ user, url, token }) => {
-    //   const verifyUrl = `${process.env.APP_URL}/verify-email?token=${token}`;
-
-    //   await transporter.sendMail({
-    //     from: `"Home Rent" <${process.env.APP_USER}>`,
-    //     to: user.email,
-    //     subject: "Verify your Home-Rent account",
-    //     html: `
-    //       <h2>Hello ${user.name}</h2>
-    //       <p>Please verify your email to activate your account.</p>
-    //       <a href="${verifyUrl}">Verify Email</a>
-    //       <p>Click Here: ${url}</p>
-    //     `,
-    //   });
-    // },
-
+    
 
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url, token }) => {

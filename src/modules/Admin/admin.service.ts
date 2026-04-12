@@ -188,10 +188,38 @@ const getUnverifiedOwnersFromDB = async (
 
 // ================= REVIEW MANAGEMENT SERVICES =================
 
-const getFlaggedReviewsFromDB = async (
-  page: number = 1,
-  pageSize: number = 20
-) => {
+// const getFlaggedReviewsFromDB = async (
+//   page: number = 1,
+//   pageSize: number = 20
+// ) => {
+//   const { skip } = calculatePagination(page, pageSize);
+
+//   const [reviews, total] = await Promise.all([
+//     prisma.review.findMany({
+//       where: { isFlagged: true },
+//       skip,
+//       take: pageSize,
+//       include: {
+//         user: {
+//           select: { id: true, name: true, email: true },
+//         },
+//         property: {
+//           select: { id: true, title: true },
+//         },
+//       },
+//       orderBy: { createdAt: "desc" },
+//     }),
+//     prisma.review.count({ where: { isFlagged: true } }),
+//   ]);
+
+//   return buildPaginationResponse(reviews, total, page, pageSize);
+// };
+
+
+
+
+// ✅ পরে — সব field আছে
+const getFlaggedReviewsFromDB = async (page = 1, pageSize = 20) => {
   const { skip } = calculatePagination(page, pageSize);
 
   const [reviews, total] = await Promise.all([
@@ -201,10 +229,10 @@ const getFlaggedReviewsFromDB = async (
       take: pageSize,
       include: {
         user: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true, image: true }, // ✅ image যোগ হয়েছে
         },
         property: {
-          select: { id: true, title: true },
+          select: { id: true, title: true, city: true, area: true }, // ✅ city, area যোগ হয়েছে
         },
       },
       orderBy: { createdAt: "desc" },
@@ -214,6 +242,7 @@ const getFlaggedReviewsFromDB = async (
 
   return buildPaginationResponse(reviews, total, page, pageSize);
 };
+
 
 const hideReviewIntoDB = async (
   reviewId: string,
