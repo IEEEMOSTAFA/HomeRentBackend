@@ -239,7 +239,7 @@ const confirmPaymentIntoDB = async (
       where: { id: payment.id },
       data: {
         status: "SUCCESS",
-        receiptUrl: paymentIntent.receipt_url || null,
+        receiptUrl:  null,
       },
     }),
     prisma.booking.update({
