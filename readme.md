@@ -325,301 +325,94 @@ RentHome is a production-grade rental property platform built for Bangladesh. It
 ---
 
 
-## Folder Structure
+## 📁 Folder Structure
 
-
-
+```bash
 renthome-backend/
+│
 ├── src/
-│   ├── config/
-│   │   ├── index.ts                 # Environment configuration
-│   │   ├── database.ts              # Database configuration
-│   │   ├── redis.ts                 # Redis configuration
-│   │   ├── cloudinary.ts            # Cloudinary config
-│   │   ├── payment.ts               # Payment gateway configs
-│   │   └── constants.ts             # App constants
+│   ├── config/                  # App configuration
+│   │   ├── index.ts
+│   │   ├── database.ts
+│   │   ├── redis.ts
+│   │   ├── cloudinary.ts
+│   │   ├── payment.ts
+│   │   └── constants.ts
 │   │
-│   ├── lib/
-│   │   ├── prisma.ts                # Prisma client instance
-│   │   ├── redis.ts                 # Redis client instance
-│   │   ├── logger.ts                # Winston/Pino logger
-│   │   └── queue.ts                 # Bull queue instance
+│   ├── lib/                     # External services
+│   │   ├── prisma.ts
+│   │   ├── redis.ts
+│   │   ├── logger.ts
+│   │   └── queue.ts
 │   │
-│   ├── errors/
-│   │   ├── AppError.ts              # Custom error class
-│   │   ├── handlePrismaError.ts     # Prisma error handler
-│   │   ├── handlePrismaValidationError.ts
-│   │   ├── handleZodError.ts        # Zod validation errors
-│   │   └── errorCodes.ts            # Error code constants
+│   ├── middlewares/             # Express middlewares
+│   │   ├── auth.ts
+│   │   ├── roleGuard.ts
+│   │   ├── validateRequest.ts
+│   │   ├── rateLimiter.ts
+│   │   └── globalErrorHandler.ts
 │   │
-│   ├── interfaces/
-│   │   ├── error.ts                 # Error type definitions
-│   │   ├── pagination.ts            # Pagination interfaces
-│   │   ├── request.ts               # Extended request interface
-│   │   └── response.ts              # Response interfaces
-│   │
-│   ├── middlewares/
-│   │   ├── auth.ts                  # JWT auth middleware
-│   │   ├── globalErrorHandler.ts    # Global error handler
-│   │   ├── notFound.ts              # 404 handler
-│   │   ├── validateRequest.ts       # Zod validation middleware
-│   │   ├── roleGuard.ts             # Role-based access control
-│   │   ├── rateLimiter.ts           # Rate limiting middleware
-│   │   ├── upload.ts                # File upload middleware
-│   │   └── cache.ts                 # Redis cache middleware
-│   │
-│   ├── modules/
+│   ├── modules/                 # Feature modules
 │   │   ├── Auth/
-│   │   │   ├── auth.controller.ts
-│   │   │   ├── auth.route.ts
-│   │   │   ├── auth.service.ts
-│   │   │   ├── auth.utils.ts        # JWT helpers, password hashing
-│   │   │   ├── auth.validation.ts
-│   │   │   ├── auth.constant.ts
-│   │   │   ├── auth.interface.ts
-│   │   │   └── auth.events.ts       # Auth event handlers
-│   │   │
 │   │   ├── User/
-│   │   │   ├── user.controller.ts
-│   │   │   ├── user.route.ts
-│   │   │   ├── user.service.ts
-│   │   │   ├── user.utils.ts
-│   │   │   ├── user.validation.ts
-│   │   │   ├── user.constant.ts
-│   │   │   ├── user.interface.ts
-│   │   │   └── user.events.ts
-│   │   │
 │   │   ├── Property/
-│   │   │   ├── property.controller.ts
-│   │   │   ├── property.route.ts
-│   │   │   ├── property.service.ts
-│   │   │   ├── property.utils.ts    # Slug generation, image handling
-│   │   │   ├── property.validation.ts
-│   │   │   ├── property.constant.ts
-│   │   │   ├── property.interface.ts
-│   │   │   ├── property.events.ts
-│   │   │   └── property.filter.ts   # Search/filter logic
-│   │   │
 │   │   ├── Booking/
-│   │   │   ├── booking.controller.ts
-│   │   │   ├── booking.route.ts
-│   │   │   ├── booking.service.ts
-│   │   │   ├── booking.utils.ts
-│   │   │   ├── booking.validation.ts
-│   │   │   ├── booking.constant.ts
-│   │   │   ├── booking.interface.ts
-│   │   │   ├── booking.events.ts
-│   │   │   └── booking.workflow.ts  # Booking state machine
-│   │   │
 │   │   ├── Payment/
-│   │   │   ├── payment.controller.ts
-│   │   │   ├── payment.route.ts
-│   │   │   ├── payment.service.ts
-│   │   │   ├── payment.utils.ts
-│   │   │   ├── payment.validation.ts
-│   │   │   ├── payment.constant.ts
-│   │   │   ├── payment.interface.ts
-│   │   │   ├── payment.events.ts
-│   │   │   └── gateways/
-│   │   │       ├── shurjopay.ts     # ShurjoPay integration
-│   │   │       ├── stripe.ts        # Stripe integration
-│   │   │       ├── bkash.ts         # bKash integration
-│   │   │       ├── nagad.ts         # Nagad integration
-│   │   │       └── index.ts
-│   │   │
 │   │   ├── Review/
-│   │   │   ├── review.controller.ts
-│   │   │   ├── review.route.ts
-│   │   │   ├── review.service.ts
-│   │   │   ├── review.utils.ts
-│   │   │   ├── review.validation.ts
-│   │   │   ├── review.constant.ts
-│   │   │   ├── review.interface.ts
-│   │   │   └── review.events.ts
-│   │   │
-│   │   ├── Category/
-│   │   │   ├── category.controller.ts
-│   │   │   ├── category.route.ts
-│   │   │   ├── category.service.ts
-│   │   │   ├── category.utils.ts
-│   │   │   ├── category.validation.ts
-│   │   │   ├── category.constant.ts
-│   │   │   └── category.interface.ts
-│   │   │
-│   │   ├── Dashboard/
-│   │   │   ├── dashboard.controller.ts
-│   │   │   ├── dashboard.route.ts
-│   │   │   ├── dashboard.service.ts
-│   │   │   ├── dashboard.utils.ts
-│   │   │   ├── dashboard.validation.ts
-│   │   │   ├── dashboard.constant.ts
-│   │   │   └── dashboard.interface.ts
-│   │   │
-│   │   ├── Admin/
-│   │   │   ├── admin.controller.ts
-│   │   │   ├── admin.route.ts
-│   │   │   ├── admin.service.ts
-│   │   │   ├── admin.utils.ts
-│   │   │   ├── admin.validation.ts
-│   │   │   ├── admin.constant.ts
-│   │   │   └── admin.interface.ts
-│   │   │
 │   │   ├── Notification/
-│   │   │   ├── notification.controller.ts
-│   │   │   ├── notification.route.ts
-│   │   │   ├── notification.service.ts
-│   │   │   ├── notification.utils.ts
-│   │   │   ├── notification.validation.ts
-│   │   │   ├── notification.constant.ts
-│   │   │   ├── notification.interface.ts
-│   │   │   └── providers/
-│   │   │       ├── email.ts         # Email provider
-│   │   │       ├── sms.ts           # SMS provider
-│   │   │       ├── push.ts          # Push notification
-│   │   │       └── index.ts
-│   │   │
-│   │   ├── Message/
-│   │   │   ├── message.controller.ts
-│   │   │   ├── message.route.ts
-│   │   │   ├── message.service.ts
-│   │   │   ├── message.utils.ts
-│   │   │   ├── message.validation.ts
-│   │   │   ├── message.constant.ts
-│   │   │   ├── message.interface.ts
-│   │   │   └── message.socket.ts    # WebSocket handlers
-│   │   │
-│   │   ├── Analytics/
-│   │   │   ├── analytics.controller.ts
-│   │   │   ├── analytics.route.ts
-│   │   │   ├── analytics.service.ts
-│   │   │   ├── analytics.utils.ts
-│   │   │   ├── analytics.validation.ts
-│   │   │   ├── analytics.constant.ts
-│   │   │   ├── analytics.interface.ts
-│   │   │   └── processors/
-│   │   │       ├── daily.processor.ts
-│   │   │       ├── weekly.processor.ts
-│   │   │       └── monthly.processor.ts
-│   │   │
 │   │   └── Blog/
-│   │       ├── blog.controller.ts
-│   │       ├── blog.route.ts
-│   │       ├── blog.service.ts
-│   │       ├── blog.utils.ts
-│   │       ├── blog.validation.ts
-│   │       ├── blog.constant.ts
-│   │       └── blog.interface.ts
 │   │
-│   ├── routes/
-│   │   ├── index.ts                 # Route aggregator
-│   │   └── webhooks.ts              # Webhook routes (payment callbacks)
+│   ├── routes/                  # API routes
+│   │   ├── index.ts
+│   │   └── webhooks.ts
 │   │
-│   ├── utils/
-│   │   ├── catchAsync.ts            # Async error wrapper
-│   │   ├── sendResponse.ts          # Response formatter
-│   │   ├── pagination.ts            # Pagination helper
-│   │   ├── slugify.ts               # Slug generation
-│   │   ├── dateHelpers.ts           # Date manipulation
-│   │   ├── fileUpload.ts            # File upload helper
-│   │   ├── cloudinary.ts            # Cloudinary upload
-│   │   ├── cache.ts                 # Redis cache helpers
-│   │   └── validators.ts            # Custom validators
+│   ├── utils/                   # Helpers
+│   │   ├── catchAsync.ts
+│   │   ├── sendResponse.ts
+│   │   └── pagination.ts
 │   │
-│   ├── jobs/                        # Background jobs
-│   │   ├── index.ts                 # Queue initialization
+│   ├── jobs/                    # Background jobs
 │   │   ├── email.job.ts
-│   │   ├── notification.job.ts
-│   │   ├── analytics.job.ts
-│   │   ├── bookingExpiration.job.ts
-│   │   └── paymentReconciliation.job.ts
+│   │   └── analytics.job.ts
 │   │
-│   ├── events/
-│   │   ├── index.ts                 # Event emitter setup
+│   ├── events/                  # Event system
 │   │   ├── handlers/
-│   │   │   ├── user.handler.ts
-│   │   │   ├── property.handler.ts
-│   │   │   ├── booking.handler.ts
-│   │   │   └── payment.handler.ts
-│   │   └── listeners.ts             # Event listeners registration
+│   │   └── listeners.ts
 │   │
-│   ├── templates/                   # Email templates
-│   │   ├── welcome.hbs
-│   │   ├── booking-confirmation.hbs
-│   │   ├── booking-request.hbs
-│   │   ├── payment-receipt.hbs
-│   │   ├── property-approved.hbs
-│   │   ├── property-rejected.hbs
-│   │   ├── reset-password.hbs
-│   │   └── partials/
-│   │       ├── header.hbs
-│   │       └── footer.hbs
+│   ├── templates/               # Email templates
+│   │   └── *.hbs
 │   │
-│   ├── __tests__/
+│   ├── tests/                   # Testing
 │   │   ├── unit/
-│   │   │   ├── modules/
-│   │   │   │   ├── Auth/
-│   │   │   │   ├── User/
-│   │   │   │   └── Property/
-│   │   │   └── utils/
-│   │   ├── integration/
-│   │   │   ├── routes/
-│   │   │   └── database/
-│   │   ├── fixtures/
-│   │   │   ├── users.ts
-│   │   │   ├── properties.ts
-│   │   │   └── bookings.ts
-│   │   └── helpers/
-│   │       └── testSetup.ts
+│   │   └── integration/
 │   │
-│   ├── app.ts                       # Express app setup
-│   └── server.ts                    # Server entry point
+│   ├── app.ts
+│   └── server.ts
 │
-├── prisma/
-│   ├── schema.prisma                # Prisma schema
-│   ├── migrations/                  # Migration files
-│   │   └── ...
-│   ├── seed.ts                      # Seed script
-│   └── seeds/
-│       ├── users.seed.ts
-│       ├── categories.seed.ts
-│       ├── amenities.seed.ts
-│       └── cities.seed.ts
+├── prisma/                      # Database
+│   ├── schema.prisma
+│   ├── migrations/
+│   └── seed.ts
 │
-├── scripts/
+├── scripts/                     # DevOps scripts
 │   ├── deploy.sh
-│   ├── backup-db.sh
-│   └── cleanup.sh
+│   └── backup-db.sh
 │
-├── uploads/                         # Temporary uploads (not committed)
-│   └── .gitkeep
+├── uploads/                     # Temp uploads
+├── logs/                        # Logs
 │
-├── logs/                            # Application logs (not committed)
-│   ├── .gitkeep
-│   └── error.log
-│
-├── .env.example                     # Environment variables example
-├── .env.development                 # Development env (not committed)
-├── .env.production                  # Production env (not committed)
-├── .env.test                        # Test env
+├── .env.example
 ├── .gitignore
-├── .eslintrc.js                     # ESLint configuration
-├── .prettierrc                      # Prettier configuration
-├── .dockerignore
-├── tsconfig.json                    # TypeScript configuration
-├── tsconfig.build.json              # Build-specific TypeScript config
 ├── package.json
-├── package-lock.json
-├── nodemon.json                     # Nodemon configuration
-├── jest.config.ts                   # Jest test configuration
-├── docker-compose.yml               # Docker compose for development
-├── Dockerfile                       # Docker configuration
-├── Dockerfile.dev                   # Development Dockerfile
-├── README.md
+├── tsconfig.json
+├── Dockerfile
+├── docker-compose.yml
+│
 └── .github/
     └── workflows/
-        ├── ci.yml                   # Continuous Integration
-        └── deploy.yml               # Deployment workflow
-
+        ├── ci.yml
+        └── deploy.yml
+```
 ## 8. Booking & Payment Flow
 
 ### Flow Diagram :  https://mermaid.ai/d/faf2e05e-8269-4182-9621-f973b2d5ca9e
