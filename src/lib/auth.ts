@@ -114,15 +114,28 @@ export const auth = betterAuth({
   },
 
   // ✅ Cross-origin cookie এর জন্য — সবচেয়ে গুরুত্বপূর্ণ fix
+  // advanced: {
+  //   disableCSRFCheck: true,
+  //   defaultCookieAttributes: {
+  //     secure: true,        // ✅ HTTPS এ চাই
+  //     httpOnly: true,
+  //     sameSite: "none",    // ✅ cross-origin cookie allow করে
+  //     partitioned: true,   // ✅ Chrome এর নতুন CHIPS standard
+  //   },
+  // },
   advanced: {
-    disableCSRFCheck: true,
-    defaultCookieAttributes: {
-      secure: true,        // ✅ HTTPS এ চাই
-      httpOnly: true,
-      sameSite: "none",    // ✅ cross-origin cookie allow করে
-      partitioned: true,   // ✅ Chrome এর নতুন CHIPS standard
-    },
+  disableCSRFCheck: true,
+  crossSubdomainCookies: {
+    enabled: false,
   },
+  defaultCookieAttributes: {
+    secure: true,
+    httpOnly: true,
+    sameSite: "none",     // ✅ cross-origin এর জন্য
+    partitioned: true,    // ✅ Chrome CHIPS
+    path: "/",
+  },
+},
 
   socialProviders: {
     google: {

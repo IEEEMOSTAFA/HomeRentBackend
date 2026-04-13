@@ -34,13 +34,34 @@ const app: Application = express();
 
 // Updated::
 
+// app.use(
+//   cors({
+//     origin: [
+      
+//       "http://localhost:3000"
+//     ],
+//     credentials: true,
+//   })
+// );
+
+
 app.use(
   cors({
     origin: [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      process.env.APP_URL || ""     // ✅ Vercel URL
       
-      "http://localhost:3000"
-    ],
+    ].filter(Boolean),
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type", 
+      "Authorization", 
+      "Cookie",
+      "Origin",
+      "Accept",
+    ],
   })
 );
 
